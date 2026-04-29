@@ -1171,7 +1171,7 @@
         <div class="setting-item">
           <div class="setting-label">API Key</div>
           <div class="api-key-input-wrap">
-            <input type="password" class="api-key-input" id="apiKeyInput" value="sk-uQtiXM3fSyc6J64DpIpIJ1GXTq7jsrk6LLpixSi0U6h8TVmn" placeholder="sk-..." oninput="onApiKeyChange()">
+            <input type="password" class="api-key-input" id="apiKeyInput" value="" placeholder="请填写 API KEY" oninput="onApiKeyChange()">
             <button class="api-key-toggle" onclick="toggleApiKeyVisibility()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
@@ -1321,7 +1321,7 @@
   <script>
     // ========== State ==========
     const state = {
-      apiKey: localStorage.getItem('gpt_image2_api_key') || 'sk-uQtiXM3fSyc6J64DpIpIJ1GXTq7jsrk6LLpixSi0U6h8TVmn',
+      apiKey: localStorage.getItem('gpt_image2_api_key') || '',
       baseUrl: localStorage.getItem('gpt_image2_base_url') || 'https://ai.comfly.chat/v1',
       size: '1024x1024',
       quality: 'high',
