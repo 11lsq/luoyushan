@@ -1,0 +1,5 @@
+node_modules/
+uploads/
+.workbuddy/
+test_output.png
+.DS_Store
