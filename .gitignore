@@ -3,3 +3,6 @@ uploads/
 .workbuddy/
 test_output.png
 .DS_Store
+deploy_ssh.py
+deploy_direct.py
+tmp_check.js
