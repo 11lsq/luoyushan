@@ -2386,23 +2386,25 @@
         const result = await callVideoAPI(prompt, currentRefImages);
         console.log('[Video API] Submitted:', result);
 
-        if (!result.id) {
+        if (!result.id && !result.task_id) {
           throw { message: '未收到任务ID', hint: '' };
         }
 
+        const taskId = result.id || result.task_id;
+
         // Store task ID for cancellation
         const msg = state.messages.find(m => m.id === genId);
-        if (msg) msg.videoTaskId = result.id;
+        if (msg) msg.videoTaskId = taskId;
 
         updateVideoGeneratingProgress(genId, result.status, result.progress || 0);
 
         // Start polling
-        pollVideoStatus(result.id, genId, targetConvId, prompt, currentRefImages);
+        pollVideoStatus(taskId, genId, targetConvId, prompt, currentRefImages);
 
         // Update pending generation intent for refresh recovery
         try {
           localStorage.setItem('gpt_image2_pending_video', JSON.stringify({
-            prompt, taskId: result.id, videoSize: state.videoSize, convId: targetConvId,
+            prompt, taskId: taskId, videoSize: state.videoSize, convId: targetConvId,
           }));
         } catch(e) {}
 
@@ -3905,8 +3907,122 @@
       });
     }
 
-    // ========== Video API Calls ==========
+    // ========== Platform Detection ==========
+    function detectPlatform(url) {
+      if (!url) return 'scd666';
+      if (url.includes('comfly')) return 'comfly';
+      if (url.includes('scd666')) return 'scd666';
+      return 'scd666'; // default
+    }
+
+    // ========== Video API Router ==========
     async function callVideoAPI(prompt, refImages) {
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const platform = detectPlatform(baseUrl);
+      if (platform === 'comfly') {
+        return await callComflyVideoAPI(prompt, refImages);
+      }
+      return await callScdVideoAPI(prompt, refImages);
+    }
+
+    function pollVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const platform = detectPlatform(baseUrl);
+      if (platform === 'comfly') {
+        return pollComflyVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs);
+      }
+      return pollScdVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs);
+    }
+
+    // ========== Comfly Video API ==========
+    async function callComflyVideoAPI(prompt, refImages) {
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const apiKey = state.videoApiKey;
+      const size = state.videoSize;
+
+      const body = {
+        model: getCurrentModelName(),
+        prompt: prompt,
+        size: size,
+      };
+
+      if (refImages && refImages.length > 0) {
+        body.images = refImages; // comfly uses JSON images array
+      }
+
+      const response = await fetch(baseUrl + '/v2/videos/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        let errMsg = 'HTTP ' + response.status;
+        let errHint = '';
+        try { const d = await response.json(); errMsg = d.message || d.error?.message || errMsg; } catch(e) {}
+        if (response.status === 401) errHint = '请检查视频 API Key';
+        else if (response.status === 429) errHint = '请求过于频繁';
+        const err = new Error(errMsg);
+        err.hint = errHint;
+        throw err;
+      }
+      return await response.json();
+    }
+
+    function pollComflyVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const apiKey = state.videoApiKey;
+      let pollCount = 0;
+      const maxPolls = 120;
+
+      const intervalId = setInterval(async () => {
+        pollCount++;
+        if (pollCount > maxPolls) {
+          clearInterval(intervalId);
+          delete state.videoPollIntervals[taskId];
+          replaceWithVideoError(genId, '视频生成超时，请重试', '', prompt);
+          return;
+        }
+
+        try {
+          const response = await fetch(baseUrl + '/v2/videos/generations/' + taskId, {
+            headers: { 'Authorization': 'Bearer ' + apiKey },
+          });
+          if (!response.ok) {
+            clearInterval(intervalId);
+            delete state.videoPollIntervals[taskId];
+            replaceWithVideoError(genId, '查询状态失败: HTTP ' + response.status, '', prompt);
+            return;
+          }
+          const data = await response.json();
+          console.log('[Comfly Video Poll]', taskId, data.status, data.progress);
+
+          updateVideoGeneratingProgress(genId, data.status, data.progress);
+
+          if (data.status === 'completed') {
+            clearInterval(intervalId);
+            delete state.videoPollIntervals[taskId];
+            replaceWithVideo(genId, data.video_url, prompt, data.size, refImageSrcs, targetConvId, data);
+          } else if (data.status === 'failed') {
+            clearInterval(intervalId);
+            delete state.videoPollIntervals[taskId];
+            const errMsg = data.error?.message || data.message || '视频生成失败';
+            replaceWithVideoError(genId, errMsg, '', prompt);
+          }
+        } catch (err) {
+          console.error('Comfly poll error:', err);
+        }
+      }, 5000);
+
+      state.videoPollIntervals[taskId] = intervalId;
+      return intervalId;
+    }
+
+    // ========== Scd666 Video API (existing) ==========
+    async function callScdVideoAPI(prompt, refImages) {
       const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
       const apiKey = state.videoApiKey;
       const size = state.videoSize;
@@ -3986,7 +4102,7 @@
       return await response.json();
     }
 
-    async function pollVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
+    async function pollScdVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
       const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
       const apiKey = state.videoApiKey;
       let pollCount = 0;
@@ -4012,14 +4128,16 @@
             return;
           }
           const data = await response.json();
-          console.log('[Video Poll]', taskId, data.status, data.progress);
+          console.log('[Scd666 Video Poll]', taskId, data.status, data.progress);
 
           updateVideoGeneratingProgress(genId, data.status, data.progress);
 
           if (data.status === 'completed') {
             clearInterval(intervalId);
             delete state.videoPollIntervals[taskId];
-            replaceWithVideo(genId, data.video_url, prompt, data.size, refImageSrcs, targetConvId, data);
+            // scd666 returns both id and task_id; use whichever is the video url key
+            const videoUrl = data.video_url || data.url || '';
+            replaceWithVideo(genId, videoUrl, prompt, data.size, refImageSrcs, targetConvId, data);
           } else if (data.status === 'failed') {
             clearInterval(intervalId);
             delete state.videoPollIntervals[taskId];
