@@ -174,6 +174,33 @@
       border-radius: 999px; letter-spacing: 0.03em;
     }
     .topbar-spacer { flex: 1; }
+    /* ========== Mode Switcher ========== */
+    .mode-switcher {
+      display: flex;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .mode-btn {
+      padding: 6px 14px;
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all var(--transition);
+      font-family: var(--font);
+      white-space: nowrap;
+    }
+    .mode-btn:hover { color: var(--text-secondary); }
+    .mode-btn.active {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
     .topbar-btn {
       background: none; border: none; color: var(--text-tertiary);
       cursor: pointer; padding: 8px; border-radius: 8px;
@@ -554,6 +581,8 @@
     }
     .cell-overlay-btn:hover { background: rgba(255,255,255,0.3); }
     .cell-overlay-btn svg { width: 14px; height: 14px; }
+    .cell-overlay-video-btn { background: rgba(139,92,246,0.25); }
+    .cell-overlay-video-btn:hover { background: rgba(139,92,246,0.45); }
 
     /* Bottom action bar */
     .image-result-footer {
@@ -846,6 +875,29 @@
     }
     .count-option:hover { background: var(--bg-hover); color: var(--text-primary); }
     .count-option.selected { color: var(--accent-green); background: var(--accent-green-light); }
+
+    /* Mode dropdown */
+    .mode-dropdown-wrap { position: relative; }
+    .mode-pill { gap: 6px; padding: 6px 12px; }
+    .mode-pill svg { width: 10px; height: 10px; }
+    .mode-dropdown {
+      display: none; position: fixed;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      z-index: 110;
+      min-width: 130px;
+    }
+    .mode-dropdown.open { display: block; }
+    .mode-option {
+      padding: 10px 14px; font-size: 13px;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      transition: background var(--transition);
+    }
+    .mode-option:hover { background: var(--bg-hover); }
+    .mode-option.selected { color: var(--accent-green); }
+
     .toolbar-pill:hover {
       background: var(--bg-hover);
       color: var(--text-secondary);
@@ -967,6 +1019,232 @@
     .api-key-status.connected { color: var(--accent-green); }
     .api-key-status.disconnected { color: var(--text-tertiary); }
 
+    /* ========== Settings Tabs ========== */
+    .settings-tabs {
+      display: flex; border-bottom: 1px solid var(--border-color);
+      padding: 0 20px; gap: 0;
+    }
+    .settings-tab {
+      padding: 10px 16px; font-size: 13px; font-weight: 500;
+      color: var(--text-tertiary); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--transition); background: none; border-top: none;
+      border-left: none; border-right: none; font-family: var(--font);
+      margin-bottom: -1px;
+    }
+    .settings-tab:hover { color: var(--text-primary); }
+    .settings-tab.active { color: var(--accent-green); border-bottom-color: var(--accent-green); }
+
+    /* ========== Preset Dropdown ========== */
+    .preset-select-wrap {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .preset-dropdown {
+      flex: 1; position: relative;
+    }
+    .preset-dropdown-trigger {
+      width: 100%; padding: 9px 14px;
+      background: var(--bg-input); border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); color: var(--text-primary);
+      font-size: 13px; font-family: var(--font);
+      cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+      transition: border-color var(--transition);
+    }
+    .preset-dropdown-trigger:hover { border-color: var(--border-light); }
+    .preset-dropdown-trigger svg { width: 14px; height: 14px; color: var(--text-tertiary); }
+    .preset-dropdown-options {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); box-shadow: var(--shadow-lg);
+      z-index: 10; display: none; max-height: 180px; overflow-y: auto;
+    }
+    .preset-dropdown-options.open { display: block; }
+    .preset-dropdown-option {
+      padding: 9px 14px; font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background var(--transition);
+    }
+    .preset-dropdown-option:hover { background: var(--bg-hover); }
+    .preset-dropdown-option.active { color: var(--accent-green); }
+    .preset-manage-btn {
+      width: 36px; height: 36px; flex-shrink: 0;
+      background: var(--bg-input); border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); color: var(--text-tertiary);
+      font-size: 18px; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; transition: all var(--transition);
+    }
+    .preset-manage-btn:hover { border-color: var(--accent-green); color: var(--accent-green); background: var(--bg-hover); }
+
+    /* ========== Preset Modal ========== */
+    .preset-modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 300; align-items: center; justify-content: center;
+    }
+    .preset-modal-backdrop.open { display: flex; }
+    .preset-modal {
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg); width: 480px; max-height: 80vh;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .preset-modal-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .preset-modal-header h4 { font-size: 15px; font-weight: 600; }
+    .preset-modal-close {
+      background: none; border: none; color: var(--text-tertiary);
+      cursor: pointer; padding: 4px; border-radius: 4px;
+    }
+    .preset-modal-close:hover { color: var(--text-primary); }
+    .preset-modal-body {
+      padding: 16px 20px; overflow-y: auto; flex: 1;
+    }
+    .preset-list-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px; border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); margin-bottom: 8px;
+      cursor: pointer; transition: all var(--transition);
+    }
+    .preset-list-item:hover { border-color: var(--border-light); }
+    .preset-list-item.active { border-color: var(--accent-green); background: var(--accent-green-light); }
+    .preset-list-item-name { font-size: 13px; font-weight: 500; }
+    .preset-list-item-actions { display: flex; gap: 6px; }
+    .preset-list-item-btn {
+      background: none; border: none; color: var(--text-tertiary);
+      cursor: pointer; padding: 4px 6px; border-radius: 4px;
+      font-size: 13px; transition: all var(--transition);
+    }
+    .preset-list-item-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .preset-list-item-btn.danger:hover { color: var(--danger); }
+
+    .preset-form { display: none; padding: 16px 20px; border-top: 1px solid var(--border-color); }
+    .preset-form.open { display: block; }
+    .preset-form-row { margin-bottom: 12px; }
+    .preset-form-row label {
+      display: block; font-size: 12px; font-weight: 500;
+      color: var(--text-secondary); margin-bottom: 4px;
+    }
+    .preset-form-row input {
+      width: 100%; padding: 8px 12px;
+      background: var(--bg-input); border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); color: var(--text-primary);
+      font-size: 13px; font-family: var(--font);
+    }
+    .preset-form-row input:focus { border-color: var(--accent-green); outline: none; }
+    .preset-form-actions {
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+    .preset-form-btn {
+      padding: 7px 16px; border-radius: var(--radius-sm);
+      font-size: 13px; font-family: var(--font); cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: var(--bg-input); color: var(--text-primary);
+      transition: all var(--transition);
+    }
+    .preset-form-btn.primary {
+      background: var(--accent-green); color: #fff; border-color: var(--accent-green);
+    }
+    .preset-form-btn:hover { opacity: 0.85; }
+    .preset-empty-hint {
+      text-align: center; padding: 32px 0; color: var(--text-tertiary);
+      font-size: 13px;
+    }
+    .preset-add-btn {
+      width: 100%; padding: 10px; margin-top: 8px;
+      background: none; border: 1px dashed var(--border-color);
+      border-radius: var(--radius-sm); color: var(--text-tertiary);
+      font-size: 13px; cursor: pointer; font-family: var(--font);
+      transition: all var(--transition);
+    }
+    .preset-add-btn:hover { border-color: var(--accent-green); color: var(--accent-green); }
+
+    /* ========== Video Generating Card ========== */
+    .video-generating {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      max-width: 840px;
+    }
+    .video-generating-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .video-generating-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .video-generating-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    .video-progress-bar {
+      width: 100%;
+      height: 4px;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .video-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-green), var(--accent-purple));
+      border-radius: 2px;
+      transition: width 0.8s ease;
+      width: 0%;
+    }
+    .video-progress-text {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      text-align: center;
+    }
+
+    /* ========== Video Result Card ========== */
+    .video-result {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      max-width: 840px;
+    }
+    .video-player-wrap {
+      position: relative;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 16 / 9;
+      max-height: 512px;
+    }
+    .video-player-wrap.video-vertical {
+      aspect-ratio: 9 / 16;
+      max-width: 360px;
+      margin: 0 auto;
+    }
+    .video-player-wrap video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .video-result .meta-tags {
+      margin-bottom: 12px;
+    }
+
+    /* ========== Video Placeholder ========== */
+    .video-placeholder {
+      text-align: center; padding: 40px 20px;
+      color: var(--text-tertiary); font-size: 14px;
+    }
+    .video-placeholder-icon { font-size: 40px; margin-bottom: 12px; }
+
     /* ========== Lightbox ========== */
     .lightbox {
       display: none; position: fixed; inset: 0;
@@ -1060,10 +1338,6 @@
         <button class="topbar-toggle" onclick="toggleSidebar()" title="切换侧栏">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <div class="topbar-model">
-          <span>gpt-image-2</span>
-          <span class="topbar-model-badge">NEW</span>
-        </div>
         <div class="topbar-spacer"></div>
         <button class="topbar-btn" onclick="toggleSettings()" title="设置">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1078,10 +1352,10 @@
         </button>
         <!-- Empty State -->
         <div class="empty-state" id="emptyState">
-          <div class="empty-state-hero">🎨</div>
-          <h2>创建图像</h2>
-          <p>描述你想要的图像，像聊天一样发送提示词，GPT Image 2 为你逐张生成。</p>
-          <div class="suggestions">
+          <div class="empty-state-hero" id="emptyStateHero">🎨</div>
+          <h2 id="emptyStateTitle">创建图像</h2>
+          <p id="emptyStateDesc">描述你想要的图像，像聊天一样发送提示词，GPT Image 2 为你逐张生成。</p>
+          <div class="suggestions" id="imageSuggestions">
             <div class="suggestion-card" onclick="useSuggestion('一只赛博朋克风格的城市夜景，霓虹灯牌写着「深夜食堂」，雨水反射着灯光')">
               <span class="suggestion-card-icon">🌃</span>
               <span class="suggestion-card-text">赛博朋克城市夜景，含文字渲染</span>
@@ -1097,6 +1371,24 @@
             <div class="suggestion-card" onclick="useSuggestion('信息图：2026年AI行业趋势，蓝色调，标题「AI Growth 2026」')">
               <span class="suggestion-card-icon">📊</span>
               <span class="suggestion-card-text">信息图表设计，数据可视化</span>
+            </div>
+          </div>
+          <div class="suggestions" id="videoSuggestions" style="display:none;">
+            <div class="suggestion-card" onclick="useSuggestion('一只可爱的小猫在阳光下的花园里玩耍，树叶随风飘动')">
+              <span class="suggestion-card-icon">🐱</span>
+              <span class="suggestion-card-text">温馨猫咪玩耍，自然光景</span>
+            </div>
+            <div class="suggestion-card" onclick="useSuggestion('赛博朋克城市夜景，雨中霓虹灯闪烁，飞行汽车穿梭')">
+              <span class="suggestion-card-icon">🌆</span>
+              <span class="suggestion-card-text">赛博朋克夜景，动态都市</span>
+            </div>
+            <div class="suggestion-card" onclick="useSuggestion('海边日落，海浪轻轻拍打沙滩，海鸥在天空飞翔')">
+              <span class="suggestion-card-icon">🌊</span>
+              <span class="suggestion-card-text">海边日落，自然美景</span>
+            </div>
+            <div class="suggestion-card" onclick="useSuggestion('未来科技实验室，机器人在进行实验，全息屏幕显示数据')">
+              <span class="suggestion-card-icon">🤖</span>
+              <span class="suggestion-card-text">未来科技，科幻场景</span>
             </div>
           </div>
         </div>
@@ -1120,7 +1412,7 @@
               <button class="input-reference-btn" id="refImageBtn" onclick="event.stopPropagation();selectReferenceImage()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
               </button>
-              <span class="input-reference-label">参考内容</span>
+              <span class="input-reference-label" id="refLabel">参考图</span>
             </div>
             <input type="file" id="refImageInput" accept="image/*" style="display:none" onchange="onRefImageSelected(event)">
             <div class="input-textarea-wrap">
@@ -1130,16 +1422,31 @@
               </button>
             </div>
           </div>
-          <div class="input-toolbar">
+          <div class="input-toolbar" id="inputToolbar">
+            <div class="mode-dropdown-wrap" id="modeDropdownWrap">
+              <button class="toolbar-pill mode-pill" onclick="toggleModeDropdown(event)" title="切换模式">
+                <span id="currentModeIcon">🎨</span>
+                <span id="currentModeLabel">生图</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="mode-dropdown" id="modeDropdown">
+                <div class="mode-option selected" data-mode="image" onclick="selectModeOption('image')">
+                  <span>🎨</span><span>生图</span>
+                </div>
+                <div class="mode-option" data-mode="video" onclick="selectModeOption('video')">
+                  <span>🎬</span><span>生视频</span>
+                </div>
+              </div>
+            </div>
             <button class="toolbar-pill" onclick="toggleSettings()" title="尺寸">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               <span id="currentSizeLabel">1024×1024</span>
             </button>
-            <button class="toolbar-pill" onclick="cycleQuality()" title="画质">
+            <button class="toolbar-pill" id="qualityPill" onclick="cycleQuality()" title="画质">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               <span id="currentQualityLabel">High</span>
             </button>
-            <div class="count-dropdown-wrap" style="position:relative;">
+            <div class="count-dropdown-wrap" style="position:relative;" id="countDropdownWrap">
               <button class="toolbar-pill" onclick="toggleCountDropdown(event)" title="生成数量">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                 <span id="currentCountLabel">1张</span>
@@ -1160,141 +1467,251 @@
   <div class="settings-backdrop" id="settingsBackdrop" onclick="toggleSettings()"></div>
   <div class="settings-panel" id="settingsPanel">
     <div class="settings-header">
-      <h3>图像设置</h3>
+      <h3>设置</h3>
       <button class="settings-close" onclick="toggleSettings()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
+    <!-- Tab 切换 -->
+    <div class="settings-tabs">
+      <button class="settings-tab active" data-tab="image" onclick="switchSettingsTab('image')">图像设置</button>
+      <button class="settings-tab" data-tab="video" onclick="switchSettingsTab('video')">视频设置</button>
+    </div>
     <div class="settings-body">
-      <div class="setting-group">
-        <div class="setting-group-title">接口配置</div>
-        <div class="setting-item">
-          <div class="setting-label">API Key</div>
-          <div class="api-key-input-wrap">
-            <input type="password" class="api-key-input" id="apiKeyInput" value="" placeholder="请填写 API KEY" oninput="onApiKeyChange()">
-            <button class="api-key-toggle" onclick="toggleApiKeyVisibility()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
+      <!-- ===== 图像设置 Tab ===== -->
+      <div id="settingsTabImage" class="settings-tab-content">
+        <div class="setting-group">
+          <div class="setting-group-title">模型预设</div>
+          <div class="setting-item">
+            <div class="setting-label">选择预设</div>
+            <div class="preset-select-wrap">
+              <div class="preset-dropdown" id="imagePresetDropdown">
+                <div class="preset-dropdown-trigger" onclick="togglePresetDropdown('image')">
+                  <span id="imagePresetLabel">gpt-image-2</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="preset-dropdown-options" id="imagePresetOptions"></div>
+              </div>
+              <button class="preset-manage-btn" onclick="openPresetModal('image')" title="管理预设">+</button>
+            </div>
           </div>
-          <div class="api-key-status connected" id="apiKeyStatus"><span>●</span> 已配置</div>
         </div>
-        <div class="setting-item">
-          <div class="setting-label">API 地址</div>
-          <input type="text" class="api-key-input" id="apiBaseUrl" value="https://ai.comfly.chat/v1" style="padding-right:14px" onblur="saveBaseUrl()" onchange="saveBaseUrl()">
+
+        <div class="setting-group">
+          <div class="setting-group-title">接口配置</div>
+          <div class="setting-item">
+            <div class="setting-label">API Key</div>
+            <div class="api-key-input-wrap">
+              <input type="password" class="api-key-input" id="apiKeyInput" value="" placeholder="请填写 API KEY" oninput="onApiKeyChange()">
+              <button class="api-key-toggle" onclick="toggleApiKeyVisibility()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="api-key-status connected" id="apiKeyStatus"><span>●</span> 已配置</div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">API 地址</div>
+            <input type="text" class="api-key-input" id="apiBaseUrl" value="https://ai.comfly.chat/v1" style="padding-right:14px" onblur="saveBaseUrl()" onchange="saveBaseUrl()">
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-title">生成数量</div>
+          <div class="size-grid" id="countGrid">
+            <div class="size-option selected" data-count="1" onclick="selectCount(this)">
+              <div class="size-option-icon" style="width:28px;height:28px;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);">1</div>
+              <div class="size-option-label">1 张</div>
+            </div>
+            <div class="size-option" data-count="2" onclick="selectCount(this)">
+              <div class="size-option-icon" style="width:28px;height:28px;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);">2</div>
+              <div class="size-option-label">2 张</div>
+            </div>
+            <div class="size-option" data-count="4" onclick="selectCount(this)">
+              <div class="size-option-icon" style="width:28px;height:28px;font-size:16px;display:flex;align-items:center;justify-content:center;border-color:var(--accent-purple);">4</div>
+              <div class="size-option-label">4 张</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-title">画质</div>
+          <div class="setting-item">
+            <div class="setting-label">质量 <span class="setting-value" id="qualityPriceHint">~$0.211/张</span></div>
+            <div class="custom-select" id="qualitySelect">
+              <div class="custom-select-trigger" onclick="toggleSelect('qualitySelect')">
+                <span>High</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="custom-select-options">
+                <div class="custom-select-option" data-value="low" onclick="selectOption('qualitySelect', this)"><span>Low</span><span class="option-desc">~$0.006/张 · 草稿</span></div>
+                <div class="custom-select-option" data-value="medium" onclick="selectOption('qualitySelect', this)"><span>Medium</span><span class="option-desc">~$0.053/张 · 均衡</span></div>
+                <div class="custom-select-option selected" data-value="high" onclick="selectOption('qualitySelect', this)"><span>High</span><span class="option-desc">~$0.211/张 · 最佳</span></div>
+                <div class="custom-select-option" data-value="auto" onclick="selectOption('qualitySelect', this)"><span>Auto</span><span class="option-desc">自动选择</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-title">尺寸</div>
+          <div class="size-grid" id="sizeGrid">
+            <div class="size-option selected" data-size="1024x1024" onclick="selectSize(this)">
+              <div class="size-option-icon" style="width:28px;height:28px;"></div>
+              <div class="size-option-label">1:1 · 1K</div>
+            </div>
+            <div class="size-option" data-size="1536x1024" onclick="selectSize(this)">
+              <div class="size-option-icon" style="width:32px;height:22px;"></div>
+              <div class="size-option-label">3:2 · 横</div>
+            </div>
+            <div class="size-option" data-size="1024x1536" onclick="selectSize(this)">
+              <div class="size-option-icon" style="width:22px;height:32px;"></div>
+              <div class="size-option-label">2:3 · 竖</div>
+            </div>
+            <div class="size-option" data-size="1088x1920" onclick="selectSize(this)">
+              <div class="size-option-icon" style="width:18px;height:32px;"></div>
+              <div class="size-option-label">9:16 · 竖</div>
+            </div>
+            <div class="size-option" data-size="2048x2048" onclick="selectSize(this)">
+              <div class="size-option-icon" style="width:28px;height:28px;border-color:var(--accent-purple);"></div>
+              <div class="size-option-label">1:1 · 2K</div>
+            </div>
+            <div class="size-option" data-size="2048x1152" onclick="selectSize(this)">
+              <div class="size-option-icon" style="width:32px;height:22px;border-color:var(--accent-purple);"></div>
+              <div class="size-option-label">16:9 · 2K</div>
+            </div>
+            <div class="size-option" data-size="1152x2048" onclick="selectSize(this)">
+              <div class="size-option-icon" style="width:22px;height:32px;border-color:var(--accent-purple);"></div>
+              <div class="size-option-label">9:16 · 2K</div>
+            </div>
+            <div class="size-option" data-size="3840x2160" onclick="selectSize(this)">
+              <div class="size-option-icon" style="width:32px;height:22px;border-color:var(--accent-purple);"></div>
+              <div class="size-option-label">16:9 · 4K</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-title">输出格式</div>
+          <div class="setting-item">
+            <div class="setting-label">文件格式</div>
+            <div class="custom-select" id="formatSelect">
+              <div class="custom-select-trigger" onclick="toggleSelect('formatSelect')">
+                <span>PNG</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="custom-select-options">
+                <div class="custom-select-option selected" data-value="png" onclick="selectOption('formatSelect', this)"><span>PNG</span><span class="option-desc">无损</span></div>
+                <div class="custom-select-option" data-value="jpeg" onclick="selectOption('formatSelect', this)"><span>JPEG</span><span class="option-desc">有损 · 更小</span></div>
+                <div class="custom-select-option" data-value="webp" onclick="selectOption('formatSelect', this)"><span>WebP</span><span class="option-desc">现代格式</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="setting-item" id="compressionGroup" style="display:none;">
+            <div class="setting-label">压缩质量 <span class="setting-value" id="compressionValue">85</span></div>
+            <input type="range" min="10" max="100" value="85" id="compressionSlider" oninput="updateCompression()" style="width:100%;accent-color:var(--accent-green);">
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-title">高级</div>
+          <div class="setting-item">
+            <div class="setting-label">内容审核</div>
+            <div class="custom-select" id="moderationSelect">
+              <div class="custom-select-trigger" onclick="toggleSelect('moderationSelect')">
+                <span>Auto</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="custom-select-options">
+                <div class="custom-select-option selected" data-value="auto" onclick="selectOption('moderationSelect', this)"><span>Auto</span><span class="option-desc">标准</span></div>
+                <div class="custom-select-option" data-value="low" onclick="selectOption('moderationSelect', this)"><span>Low</span><span class="option-desc">宽松</span></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="setting-group">
-        <div class="setting-group-title">生成数量</div>
-        <div class="size-grid" id="countGrid">
-          <div class="size-option selected" data-count="1" onclick="selectCount(this)">
-            <div class="size-option-icon" style="width:28px;height:28px;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);">1</div>
-            <div class="size-option-label">1 张</div>
+      <!-- ===== 视频设置 Tab ===== -->
+      <div id="settingsTabVideo" class="settings-tab-content" style="display:none;">
+        <div class="setting-group">
+          <div class="setting-group-title">模型预设</div>
+          <div class="setting-item">
+            <div class="setting-label">选择预设</div>
+            <div class="preset-select-wrap">
+              <div class="preset-dropdown" id="videoPresetDropdown">
+                <div class="preset-dropdown-trigger" onclick="togglePresetDropdown('video')">
+                  <span id="videoPresetLabel">omni_flash-10s-z</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="preset-dropdown-options" id="videoPresetOptions"></div>
+              </div>
+              <button class="preset-manage-btn" onclick="openPresetModal('video')" title="管理预设">+</button>
+            </div>
           </div>
-          <div class="size-option" data-count="2" onclick="selectCount(this)">
-            <div class="size-option-icon" style="width:28px;height:28px;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);">2</div>
-            <div class="size-option-label">2 张</div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-title">接口配置</div>
+          <div class="setting-item">
+            <div class="setting-label">API Key</div>
+            <div class="api-key-input-wrap">
+              <input type="password" class="api-key-input" id="videoApiKeyInput" value="" placeholder="请填写 API KEY" oninput="onVideoApiKeyChange()">
+              <button class="api-key-toggle" onclick="toggleVideoApiKeyVisibility()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="api-key-status disconnected" id="videoApiKeyStatus"><span>●</span> 未配置</div>
           </div>
-          <div class="size-option" data-count="4" onclick="selectCount(this)">
-            <div class="size-option-icon" style="width:28px;height:28px;font-size:16px;display:flex;align-items:center;justify-content:center;border-color:var(--accent-purple);">4</div>
-            <div class="size-option-label">4 张</div>
+          <div class="setting-item">
+            <div class="setting-label">API 地址</div>
+            <input type="text" class="api-key-input" id="videoApiBaseUrl" value="https://new2api.scd666.com" style="padding-right:14px" onblur="saveVideoBaseUrl()" onchange="saveVideoBaseUrl()">
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-title">视频尺寸</div>
+          <div class="size-grid" id="videoSizeGrid">
+            <div class="size-option selected" data-size="1280x720" onclick="selectVideoSizeSetting(this)">
+              <div class="size-option-icon" style="width:36px;height:20px;"></div>
+              <div class="size-option-label">1280×720 横</div>
+            </div>
+            <div class="size-option" data-size="720x1280" onclick="selectVideoSizeSetting(this)">
+              <div class="size-option-icon" style="width:16px;height:28px;"></div>
+              <div class="size-option-label">720×1280 竖</div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
-      <div class="setting-group">
-        <div class="setting-group-title">画质</div>
-        <div class="setting-item">
-          <div class="setting-label">质量 <span class="setting-value" id="qualityPriceHint">~$0.211/张</span></div>
-          <div class="custom-select" id="qualitySelect">
-            <div class="custom-select-trigger" onclick="toggleSelect('qualitySelect')">
-              <span>High</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </div>
-            <div class="custom-select-options">
-              <div class="custom-select-option" data-value="low" onclick="selectOption('qualitySelect', this)"><span>Low</span><span class="option-desc">~$0.006/张 · 草稿</span></div>
-              <div class="custom-select-option" data-value="medium" onclick="selectOption('qualitySelect', this)"><span>Medium</span><span class="option-desc">~$0.053/张 · 均衡</span></div>
-              <div class="custom-select-option selected" data-value="high" onclick="selectOption('qualitySelect', this)"><span>High</span><span class="option-desc">~$0.211/张 · 最佳</span></div>
-              <div class="custom-select-option" data-value="auto" onclick="selectOption('qualitySelect', this)"><span>Auto</span><span class="option-desc">自动选择</span></div>
-            </div>
-          </div>
-        </div>
+  <!-- ===== Preset Management Modal ===== -->
+  <div class="preset-modal-backdrop" id="presetModalBackdrop" onclick="closePresetModal()">
+    <div class="preset-modal" onclick="event.stopPropagation()">
+      <div class="preset-modal-header">
+        <h4 id="presetModalTitle">管理图像模型预设</h4>
+        <button class="preset-modal-close" onclick="closePresetModal()">✕</button>
       </div>
-
-      <div class="setting-group">
-        <div class="setting-group-title">尺寸</div>
-        <div class="size-grid" id="sizeGrid">
-          <div class="size-option selected" data-size="1024x1024" onclick="selectSize(this)">
-            <div class="size-option-icon" style="width:28px;height:28px;"></div>
-            <div class="size-option-label">1:1 · 1K</div>
-          </div>
-          <div class="size-option" data-size="1536x1024" onclick="selectSize(this)">
-            <div class="size-option-icon" style="width:32px;height:22px;"></div>
-            <div class="size-option-label">3:2 · 横</div>
-          </div>
-          <div class="size-option" data-size="1024x1536" onclick="selectSize(this)">
-            <div class="size-option-icon" style="width:22px;height:32px;"></div>
-            <div class="size-option-label">2:3 · 竖</div>
-          </div>
-          <div class="size-option" data-size="1088x1920" onclick="selectSize(this)">
-            <div class="size-option-icon" style="width:18px;height:32px;"></div>
-            <div class="size-option-label">9:16 · 竖</div>
-          </div>
-          <div class="size-option" data-size="2048x2048" onclick="selectSize(this)">
-            <div class="size-option-icon" style="width:28px;height:28px;border-color:var(--accent-purple);"></div>
-            <div class="size-option-label">1:1 · 2K</div>
-          </div>
-          <div class="size-option" data-size="2048x1152" onclick="selectSize(this)">
-            <div class="size-option-icon" style="width:32px;height:22px;border-color:var(--accent-purple);"></div>
-            <div class="size-option-label">16:9 · 2K</div>
-          </div>
-          <div class="size-option" data-size="1152x2048" onclick="selectSize(this)">
-            <div class="size-option-icon" style="width:22px;height:32px;border-color:var(--accent-purple);"></div>
-            <div class="size-option-label">9:16 · 2K</div>
-          </div>
-          <div class="size-option" data-size="3840x2160" onclick="selectSize(this)">
-            <div class="size-option-icon" style="width:32px;height:22px;border-color:var(--accent-purple);"></div>
-            <div class="size-option-label">16:9 · 4K</div>
-          </div>
+      <div class="preset-modal-body" id="presetModalList"></div>
+      <div class="preset-form" id="presetForm">
+        <div class="preset-form-row">
+          <label>模型名称</label>
+          <input type="text" id="presetFormName" placeholder="例如：gpt-image-2">
         </div>
-      </div>
-
-      <div class="setting-group">
-        <div class="setting-group-title">输出格式</div>
-        <div class="setting-item">
-          <div class="setting-label">文件格式</div>
-          <div class="custom-select" id="formatSelect">
-            <div class="custom-select-trigger" onclick="toggleSelect('formatSelect')">
-              <span>PNG</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </div>
-            <div class="custom-select-options">
-              <div class="custom-select-option selected" data-value="png" onclick="selectOption('formatSelect', this)"><span>PNG</span><span class="option-desc">无损</span></div>
-              <div class="custom-select-option" data-value="jpeg" onclick="selectOption('formatSelect', this)"><span>JPEG</span><span class="option-desc">有损 · 更小</span></div>
-              <div class="custom-select-option" data-value="webp" onclick="selectOption('formatSelect', this)"><span>WebP</span><span class="option-desc">现代格式</span></div>
-            </div>
-          </div>
+        <div class="preset-form-row">
+          <label>API Key</label>
+          <input type="text" id="presetFormKey" placeholder="sk-...">
         </div>
-        <div class="setting-item" id="compressionGroup" style="display:none;">
-          <div class="setting-label">压缩质量 <span class="setting-value" id="compressionValue">85</span></div>
-          <input type="range" min="10" max="100" value="85" id="compressionSlider" oninput="updateCompression()" style="width:100%;accent-color:var(--accent-green);">
+        <div class="preset-form-row">
+          <label>API 地址</label>
+          <input type="text" id="presetFormUrl" placeholder="https://api.example.com/v1">
         </div>
-      </div>
-
-      <div class="setting-group">
-        <div class="setting-group-title">高级</div>
-        <div class="setting-item">
-          <div class="setting-label">内容审核</div>
-          <div class="custom-select" id="moderationSelect">
-            <div class="custom-select-trigger" onclick="toggleSelect('moderationSelect')">
-              <span>Auto</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </div>
-            <div class="custom-select-options">
-              <div class="custom-select-option selected" data-value="auto" onclick="selectOption('moderationSelect', this)"><span>Auto</span><span class="option-desc">标准</span></div>
-              <div class="custom-select-option" data-value="low" onclick="selectOption('moderationSelect', this)"><span>Low</span><span class="option-desc">宽松</span></div>
-            </div>
-          </div>
+        <div class="preset-form-row">
+          <label>默认尺寸</label>
+          <input type="text" id="presetFormSize" placeholder="1024x1024">
+        </div>
+        <div class="preset-form-actions">
+          <button class="preset-form-btn" onclick="cancelPresetForm()">取消</button>
+          <button class="preset-form-btn primary" id="presetFormSaveBtn" onclick="savePresetForm()">保存</button>
         </div>
       </div>
     </div>
@@ -1320,14 +1737,55 @@
 
   <script>
     // ========== State ==========
+    const DEFAULT_IMAGE_PRESETS = [
+      {
+        id: 'preset-1',
+        name: 'gpt-image-2',
+        apiKey: '',
+        apiUrl: 'https://ai.comfly.chat/v1',
+        size: '1024x1024',
+        quality: 'high',
+        format: 'png',
+        compression: 85,
+        moderation: 'auto'
+      }
+    ];
+
+    const DEFAULT_VIDEO_PRESETS = [
+      {
+        id: 'vpreset-1',
+        name: 'omni_flash-10s-z',
+        apiKey: '',
+        apiUrl: 'https://new2api.scd666.com',
+        size: '1280x720',
+      }
+    ];
+
     const state = {
-      apiKey: localStorage.getItem('gpt_image2_api_key') || '',
-      baseUrl: localStorage.getItem('gpt_image2_base_url') || 'https://ai.comfly.chat/v1',
+      // Mode
+      mode: 'image',              // 'image' | 'video'
+
+      // Preset system
+      imagePresets: [],           // 图像模型预设列表
+      selectedImagePresetId: '',  // 当前选中的图像预设ID
+      videoPresets: [],           // 视频模型预设列表
+      selectedVideoPresetId: '',  // 当前选中的视频预设ID
+      currentPresetType: 'image', // 当前预设面板类型
+
+      // Legacy - kept for backward compat but synced from preset
+      apiKey: '',
+      baseUrl: 'https://ai.comfly.chat/v1',
       size: '1024x1024',
       quality: 'high',
       format: 'png',
       compression: 85,
       moderation: 'auto',
+
+      // Video specific
+      videoApiKey: '',
+      videoBaseUrl: 'https://new2api.scd666.com',
+      videoSize: '1280x720',
+
       imageCount: 1,
       generating: false,
       messages: [],
@@ -1339,13 +1797,29 @@
       conversations: [],
       activeConvId: null,
       referenceImages: [],
-      uploadingRefImages: false, // 参考图上传中标志
-      activeGeneration: null, // { convId, genId, prompt, count, startTime, size, quality, refImages, completedCells:[], errorCells:[] }
-      activeGenerations: [], // 多个并发生成任务列表
+      uploadingRefImages: false,
+      activeGeneration: null,
+      activeGenerations: [],
+      videoPollIntervals: {}, // { taskId: intervalId }
     };
 
     // ========== Init ==========
     function init() {
+      // 加载预设
+      loadPresets();
+      loadVideoPresets();
+      // 同步预设到UI
+      syncPresetToUI();
+      
+      // 恢复上次使用的模式
+      try {
+        const savedMode = localStorage.getItem('gpt_image2_mode');
+        if (savedMode === 'video' || savedMode === 'image') {
+          state.mode = savedMode;
+        }
+      } catch(e) {}
+      applyModeUI();
+      
       document.getElementById('apiKeyInput').value = state.apiKey;
       document.getElementById('apiBaseUrl').value = state.baseUrl;
       updateApiKeyStatus();
@@ -1575,7 +2049,7 @@
               <div class="generating-result generating-result-single">
                 <div class="generating-result-header">
                   <span class="prompt-text">${escapeHtml(prompt)}</span>
-                  <span class="meta-tag">gpt-image-2 · ${state.quality}</span>
+                  <span class="meta-tag">${getCurrentModelName()} · ${state.quality}</span>
                   ${refBadges}
                 </div>
                 <div class="generating-placeholder" id="gen-placeholder-${id}">
@@ -1610,7 +2084,7 @@
               <div class="generating-result">
                 <div class="generating-result-header">
                   <span class="prompt-text">${escapeHtml(prompt)}</span>
-                  <span class="meta-tag">gpt-image-2 · ${state.quality} · ${count}张</span>
+                  <span class="meta-tag">${getCurrentModelName()} · ${state.quality} · ${count}张</span>
                   ${refBadges}
                 </div>
                 <div class="generating-grid" id="gen-grid-${id}">
@@ -1656,6 +2130,9 @@
         <div class="cell-overlay">
           <button class="cell-overlay-btn" data-download-src="${escapeHtml(src)}" data-download-prompt="${escapeHtml(prompt)}" onclick="event.stopPropagation(); downloadImageDirect(this.dataset.downloadSrc, event, this.dataset.downloadPrompt)" title="下载">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <button class="cell-overlay-btn cell-overlay-video-btn" data-img-src="${escapeHtml(src)}" onclick="event.stopPropagation(); generateVideoFromImage(this.dataset.imgSrc, event)" title="生成视频">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           </button>
         </div>
       `;
@@ -1751,6 +2228,18 @@
         return;
       }
 
+      // Check API key based on mode
+      if (state.mode === 'video') {
+        if (!state.videoApiKey) {
+          showToast('请先在视频设置中配置 API Key', 'warning');
+          toggleSettings();
+          switchSettingsTab('video');
+          return;
+        }
+        await sendVideoMessage(prompt);
+        return;
+      }
+
       if (!state.apiKey) {
         showToast('请先在设置中配置 API Key', 'warning');
         toggleSettings();
@@ -1763,66 +2252,36 @@
       addUserMessage(prompt);
 
       if (!state.activeConvId) {
-        const now = Date.now();
-        const conv = {
-          id: 'conv-' + now,
-          title: prompt.slice(0, 30),
-          messages: [],
-          createdAt: now,
-          updatedAt: now,
-        };
-        state.conversations.unshift(conv);
-        state.activeConvId = conv.id;
+        createNewConversation(prompt);
       }
 
       const count = state.imageCount;
-      const currentRefImages = [...state.referenceImages]; // 参考图 URL（API 调用用）
-      state.referenceImages = []; // 立即清空，防止生成期间重复携带
+      const currentRefImages = [...state.referenceImages];
+      state.referenceImages = [];
       updateRefImagePreview();
 
-      // 参考图已是服务器 URL，直接用于消息显示和持久化（无需压缩）
       const genId = addGeneratingMessage(prompt, currentRefImages);
-      const targetConvId = state.activeConvId; // 锁定生成目标对话
-
+      const targetConvId = state.activeConvId;
       const timerStart = Date.now();
-      const timerEl = document.getElementById('gen-timer-' + genId);
+      const abortController = new AbortController();
+
       const timerInterval = setInterval(() => {
         const el = document.getElementById('gen-timer-' + genId);
         if (el) el.textContent = Math.floor((Date.now() - timerStart) / 1000) + 's';
-        // 生成过程中智能滚动（用户浏览历史时不强制拉回）
         smartScrollToBottom();
       }, 1000);
 
-      const abortController = new AbortController();
-
-      // 记录活跃生成状态（用于切换对话/刷新恢复）
       const generation = {
-        convId: targetConvId,
-        genId,
-        prompt,
-        count,
-        startTime: timerStart,
-        size: state.size,
-        quality: state.quality,
-        refImages: currentRefImages,
-        completedCells: [],
-        errorCells: [],
-        abortController,
-        timerInterval,
+        convId: targetConvId, genId, prompt, count, startTime: timerStart,
+        size: state.size, quality: state.quality, refImages: currentRefImages,
+        completedCells: [], errorCells: [], abortController, timerInterval,
       };
-      // 加入活跃生成列表
       if (!state.activeGenerations) state.activeGenerations = [];
       state.activeGenerations.push(generation);
-      // 向后兼容：最新的生成也设为 activeGeneration
       state.activeGeneration = generation;
       state.generating = true;
 
-      // 保存生成意图到 localStorage（刷新恢复用，不含 base64 参考图）
-      try {
-        localStorage.setItem('gpt_image2_pending_generation', JSON.stringify({
-          prompt, count, size: state.size, quality: state.quality, convId: targetConvId,
-        }));
-      } catch(e) {}
+      try { localStorage.setItem('gpt_image2_pending_generation', JSON.stringify({ prompt, count, size: state.size, quality: state.quality, convId: targetConvId })); } catch(e) {}
 
       const results = [];
       const errors = [];
@@ -1864,7 +2323,6 @@
         if (results.length > 0) {
           const elapsed = Math.floor((Date.now() - timerStart) / 1000);
           replaceWithImage(genId, results, prompt, state.size, state.quality, null, currentRefImages, errors, targetConvId);
-
           if (errors.length > 0) {
             showToast(`生成完成 ${results.length}/${count}，${errors.length}张失败，耗时 ${elapsed}s`, 'warning');
           } else {
@@ -1875,7 +2333,6 @@
           replaceWithError(genId, firstErr.message || '全部生成失败', firstErr.hint || '', prompt, targetConvId);
           showToast('全部生成失败', 'error');
         }
-
       } catch (error) {
         if (error.name === 'AbortError') {
           const div = document.getElementById('msg-' + genId);
@@ -1889,27 +2346,85 @@
           showToast(error.message || '生成失败', 'error');
         }
       } finally {
-        // 从活跃生成列表中移除当前任务
         if (state.activeGenerations) {
           state.activeGenerations = state.activeGenerations.filter(g => g.genId !== genId);
         }
-        // 如果没有更多活跃生成，清理全局状态
         if (!state.activeGenerations || state.activeGenerations.length === 0) {
-          state.generating = false;
-          state.activeGeneration = null;
-          state.abortController = null;
+          state.generating = false; state.activeGeneration = null; state.abortController = null;
         } else {
-          // 还有其他生成中的任务，activeGeneration 指向最新的
           state.activeGeneration = state.activeGenerations[state.activeGenerations.length - 1];
           state.generating = true;
         }
         if (timerInterval) { clearInterval(timerInterval); }
         clearAllReferenceImages(true);
-        // 只在没有更多活跃生成时才清除 pending
         if (!state.activeGenerations || state.activeGenerations.length === 0) {
           try { localStorage.removeItem('gpt_image2_pending_generation'); } catch(e) {}
         }
       }
+    }
+
+    // ========== Send Video Message ==========
+    async function sendVideoMessage(prompt) {
+      const input = document.getElementById('promptInput');
+      input.value = '';
+      input.style.height = 'auto';
+
+      addUserMessage(prompt);
+
+      if (!state.activeConvId) {
+        createNewConversation(prompt);
+      }
+
+      const currentRefImages = [...state.referenceImages];
+      state.referenceImages = [];
+      updateRefImagePreview();
+
+      const genId = addVideoGeneratingMessage(prompt, currentRefImages);
+      const targetConvId = state.activeConvId;
+
+      try {
+        const result = await callVideoAPI(prompt, currentRefImages);
+        console.log('[Video API] Submitted:', result);
+
+        if (!result.id) {
+          throw { message: '未收到任务ID', hint: '' };
+        }
+
+        // Store task ID for cancellation
+        const msg = state.messages.find(m => m.id === genId);
+        if (msg) msg.videoTaskId = result.id;
+
+        updateVideoGeneratingProgress(genId, result.status, result.progress || 0);
+
+        // Start polling
+        pollVideoStatus(result.id, genId, targetConvId, prompt, currentRefImages);
+
+        // Update pending generation intent for refresh recovery
+        try {
+          localStorage.setItem('gpt_image2_pending_video', JSON.stringify({
+            prompt, taskId: result.id, videoSize: state.videoSize, convId: targetConvId,
+          }));
+        } catch(e) {}
+
+      } catch (error) {
+        console.error('[Video Error]', error);
+        replaceWithVideoError(genId, error.message || '视频生成失败', error.hint || '', prompt);
+        showToast(error.message || '视频生成失败', 'error');
+      }
+    }
+
+    // ========== Create New Conversation ==========
+    function createNewConversation(prompt) {
+      const now = Date.now();
+      const conv = {
+        id: 'conv-' + now,
+        title: prompt.slice(0, 30),
+        messages: [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      state.conversations.unshift(conv);
+      state.activeConvId = conv.id;
     }
 
     // ========== Call Image API ==========
@@ -1918,7 +2433,7 @@
       // 有参考图时尝试 multipart/form-data（兼容 DALL-E edits 格式）
       if (referenceImages.length > 0) {
         const formData = new FormData();
-        formData.append('model', 'gpt-image-2');
+        formData.append('model', getCurrentModelName());
         formData.append('prompt', prompt);
         formData.append('n', '1');
         formData.append('size', state.size);
@@ -1986,7 +2501,7 @@
 
       // 无参考图：标准 JSON 请求
       const body = {
-        model: 'gpt-image-2',
+        model: getCurrentModelName(),
         prompt: prompt,
         size: state.size,
         quality: state.quality,
@@ -2086,9 +2601,19 @@
     function retryFromCard(msgId, prompt) {
       const msg = state.messages.find(m => m.id === msgId);
       const refSrcs = msg?.refImageSrcs || [];
+
+      // 如果是视频消息，切换到视频模式
+      if (msg && msg.type === 'video') {
+        if (state.mode !== 'video') switchMode('video');
+        if (msg.videoSize) {
+          state.videoSize = msg.videoSize;
+          updateVideoSizeUI();
+        }
+      }
+
       // 恢复原始生成参数：数量、尺寸、画质
       if (msg) {
-        if (msg.count) {
+        if (msg.count && msg.type !== 'video') {
           state.imageCount = msg.count;
           document.getElementById('currentCountLabel').textContent = msg.count + '张';
           document.querySelectorAll('.count-option').forEach(o => {
@@ -2098,6 +2623,10 @@
         if (msg.size) {
           state.size = msg.size;
           document.getElementById('currentSizeLabel').textContent = msg.size.replace('x', '×');
+        }
+        if (msg.videoSize && msg.type === 'video') {
+          state.videoSize = msg.videoSize;
+          updateVideoSizeUI();
         }
         if (msg.quality) {
           state.quality = msg.quality;
@@ -2145,6 +2674,19 @@
       checkEmpty();
       document.getElementById('promptInput').focus();
       renderHistoryList();
+    }
+
+    // ========== Generate Video from Image ==========
+    function generateVideoFromImage(imageSrc, event) {
+      if (event) event.stopPropagation();
+      // 1. 切换到视频模式
+      if (state.mode !== 'video') switchMode('video');
+      // 2. 将图片作为参考图
+      state.referenceImages = [imageSrc];
+      updateRefImagePreview();
+      // 3. 聚焦输入框
+      document.getElementById('promptInput').focus();
+      showToast('已切换至生视频模式，图片已作为参考图', 'success');
     }
 
     // ========== Save Current Conversation ==========
@@ -2298,6 +2840,13 @@
           div.id = 'msg-' + msg.id;
           div.innerHTML = `<div class="message-inner"><div class="assistant-avatar">✦</div><div class="assistant-content"><div class="error-result"><div class="error-result-title">⚠️ 生成失败</div><div class="error-result-msg">历史记录</div></div></div></div>`;
           container.appendChild(div);
+        } else if (msg.type === 'video') {
+          const div = document.createElement('div');
+          div.className = 'message message-assistant';
+          div.id = 'msg-' + msg.id;
+          const refSrcs = msg.refImageSrcs || [];
+          div.innerHTML = renderVideoCard(msg.id, msg.videoUrl || '', msg.content || '', msg.videoSize || '', refSrcs, msg.createdAt);
+          container.appendChild(div);
         } else if (msg.type === 'generating') {
           // 生成中的消息：如果在活跃生成列表中找到匹配，恢复 UI；否则是残留状态，移除
           const isActive = state.activeGenerations && state.activeGenerations.some(g => g.convId === convId && g.genId === msg.id);
@@ -2332,7 +2881,7 @@
                   <div class="generating-result generating-result-single">
                     <div class="generating-result-header">
                       <span class="prompt-text">${escapeHtml(gen.prompt)}</span>
-                      <span class="meta-tag">gpt-image-2 · ${gen.quality}</span>
+                      <span class="meta-tag">${getCurrentModelName()} · ${gen.quality}</span>
                       ${refBadges}
                     </div>
                     ${completed
@@ -2369,7 +2918,7 @@
                   <div class="generating-result">
                     <div class="generating-result-header">
                       <span class="prompt-text">${escapeHtml(gen.prompt)}</span>
-                      <span class="meta-tag">gpt-image-2 · ${gen.quality} · ${gen.count}张</span>
+                      <span class="meta-tag">${getCurrentModelName()} · ${gen.quality} · ${gen.count}张</span>
                       ${refBadges}
                     </div>
                     <div class="generating-grid" id="gen-grid-${gen.genId}">
@@ -2465,6 +3014,9 @@
               <button class="cell-overlay-btn" data-download-src="${imgSrcAttr}" data-download-prompt="${safePromptAttr}" onclick="event.stopPropagation(); downloadImageDirect(this.dataset.downloadSrc, event, this.dataset.downloadPrompt)" title="下载">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               </button>
+              <button class="cell-overlay-btn cell-overlay-video-btn" data-img-src="${imgSrcAttr}" onclick="event.stopPropagation(); generateVideoFromImage(this.dataset.imgSrc, event)" title="生成视频">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </button>
             </div>
           </div>`;
       });
@@ -2550,6 +3102,18 @@
     // ========== Delete Message (Task Card) ==========
     function deleteMessage(msgId, event) {
       if (event) event.stopPropagation();
+      // 在删除前查找消息（用于获取 videoTaskId）
+      const delMsg = state.messages.find(m => m.id === msgId);
+      // 清理视频轮询
+      if (delMsg && delMsg.videoTaskId && state.videoPollIntervals[delMsg.videoTaskId]) {
+        clearInterval(state.videoPollIntervals[delMsg.videoTaskId]);
+        delete state.videoPollIntervals[delMsg.videoTaskId];
+      }
+      // 清理视频 timer
+      if (state._videoTimers && state._videoTimers[msgId]) {
+        clearInterval(state._videoTimers[msgId]);
+        delete state._videoTimers[msgId];
+      }
       // 从当前对话中删除
       state.messages = state.messages.filter(m => m.id !== msgId);
       const conv = state.conversations.find(c => c.id === state.activeConvId);
@@ -2564,7 +3128,6 @@
           if (gen.timerInterval) clearInterval(gen.timerInterval);
           state.activeGenerations = state.activeGenerations.filter(g => g.genId !== msgId);
         }
-        // 如果没有更多活跃生成，清理全局状态
         if (state.activeGenerations.length === 0) {
           state.generating = false;
           state.activeGeneration = null;
@@ -2594,6 +3157,7 @@
       state.conversations.forEach(conv => {
         const isActive = conv.id === state.activeConvId;
         const imgMsg = conv.messages.find(m => m.type === 'image');
+        const vidMsg = conv.messages.find(m => m.type === 'video');
         const firstSrc = imgMsg ? (imgMsg.images && imgMsg.images[0] && imgMsg.images[0].src) || imgMsg.src || '' : '';
         const totalImages = conv.messages.reduce((sum, m) => {
           if (m.type === 'image') {
@@ -2601,16 +3165,29 @@
           }
           return sum;
         }, 0);
+        const totalVideos = conv.messages.reduce((sum, m) => {
+          return sum + (m.type === 'video' ? 1 : 0);
+        }, 0);
+
+        let iconHtml = '🎨';
+        if (vidMsg) iconHtml = '🎬';
+        else if (firstSrc) iconHtml = '<img src="' + firstSrc + '" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'🎨\'">';
+
+        let metaHtml = formatTime(conv.updatedAt);
+        if (totalImages > 0 && totalVideos > 0) metaHtml += ` · ${totalImages}张图 + ${totalVideos}视频`;
+        else if (totalImages > 0) metaHtml += ` · ${totalImages}张图`;
+        else if (totalVideos > 0) metaHtml += ` · ${totalVideos}视频`;
+
         const item = document.createElement('div');
         item.className = 'history-item' + (isActive ? ' active' : '');
         item.onclick = () => switchConversation(conv.id);
         item.innerHTML = `
           <div class="history-item-icon">
-            ${firstSrc ? '<img src="' + firstSrc + '" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'🎨\'">' : '🎨'}
+            ${iconHtml}
           </div>
           <div class="history-item-text">
             <div class="history-item-title">${escapeHtml(conv.title)}</div>
-            <div class="history-item-meta">${formatTime(conv.updatedAt)} · ${totalImages}张图</div>
+            <div class="history-item-meta">${metaHtml}</div>
           </div>
           <button class="history-delete-btn" onclick="deleteConversation('${conv.id}', event)" title="删除">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -2640,8 +3217,13 @@
     // ========== Sidebar / Settings / Selects ==========
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
     function toggleSettings() {
+      const isOpening = !document.getElementById('settingsPanel').classList.contains('open');
       document.getElementById('settingsPanel').classList.toggle('open');
       document.getElementById('settingsBackdrop').classList.toggle('open');
+      // 打开设置时根据当前模式自动切换到对应 tab
+      if (isOpening) {
+        switchSettingsTab(state.mode === 'video' ? 'video' : 'image');
+      }
     }
     function toggleSelect(id) {
       const select = document.getElementById(id);
@@ -2663,6 +3245,7 @@
       if (selectId === 'qualitySelect') { state.quality = value; document.getElementById('currentQualityLabel').textContent = trigger.textContent; updateQualityPrice(); }
       else if (selectId === 'formatSelect') { state.format = value; document.getElementById('compressionGroup').style.display = (value === 'jpeg' || value === 'webp') ? 'block' : 'none'; }
       else if (selectId === 'moderationSelect') { state.moderation = value; }
+      syncLegacyToPresets();
     }
     function selectSize(el) {
       document.querySelectorAll('#sizeGrid .size-option').forEach(o => o.classList.remove('selected'));
@@ -2670,6 +3253,7 @@
       state.size = el.dataset.size;
       document.getElementById('currentSizeLabel').textContent = state.size.replace('x', '×');
       updateQualityPrice();
+      syncLegacyToPresets();
     }
     function selectCount(el) {
       document.querySelectorAll('#countGrid .size-option').forEach(o => o.classList.remove('selected'));
@@ -2690,6 +3274,40 @@
       // 保留旧函数兼容，实际使用下拉菜单
       toggleCountDropdown();
     }
+    // ========== Mode Dropdown ==========
+    function toggleModeDropdown(event) {
+      event.stopPropagation();
+      const dd = document.getElementById('modeDropdown');
+      const isOpen = dd.classList.contains('open');
+      document.querySelectorAll('.count-dropdown.open').forEach(el => el.classList.remove('open'));
+      if (!isOpen) {
+        const btn = document.getElementById('modeDropdownWrap').querySelector('.mode-pill');
+        const rect = btn.getBoundingClientRect();
+        dd.style.position = 'fixed';
+        dd.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        dd.style.left = rect.left + 'px';
+        dd.classList.add('open');
+      } else {
+        dd.classList.remove('open');
+      }
+    }
+
+    function selectModeOption(mode) {
+      if (state.mode === mode) {
+        document.getElementById('modeDropdown').classList.remove('open');
+        return;
+      }
+      switchMode(mode);
+      document.getElementById('modeDropdown').classList.remove('open');
+    }
+
+    // Click outside to close mode dropdown
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.mode-dropdown-wrap')) {
+        document.getElementById('modeDropdown').classList.remove('open');
+      }
+    });
+
     function toggleCountDropdown(event) {
       if (event) event.stopPropagation();
       const dd = document.getElementById('countDropdown');
@@ -2697,7 +3315,6 @@
       if (isOpen) {
         dd.classList.remove('open');
       } else {
-        // 动态计算 fixed 定位：在按钮上方弹出
         const btn = event ? event.currentTarget : document.querySelector('.count-dropdown-wrap .toolbar-pill');
         const rect = btn.getBoundingClientRect();
         dd.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
@@ -2728,22 +3345,1000 @@
       const p = ({'1024x1024':{low:'$0.006',medium:'$0.053',high:'$0.211',auto:'auto'},'1536x1024':{low:'$0.005',medium:'$0.041',high:'$0.165',auto:'auto'},'1024x1536':{low:'$0.005',medium:'$0.041',high:'$0.165',auto:'auto'}})[state.size] || {low:'~$0.006',medium:'~$0.053',high:'~$0.211',auto:'auto'};
       document.getElementById('qualityPriceHint').textContent = (p[state.quality]||'—') + '/张';
     }
-    function updateCompression() { state.compression = parseInt(document.getElementById('compressionSlider').value); document.getElementById('compressionValue').textContent = state.compression; }
+    function updateCompression() { state.compression = parseInt(document.getElementById('compressionSlider').value); document.getElementById('compressionValue').textContent = state.compression; syncLegacyToPresets(); }
 
     // ========== API Key ==========
-    function onApiKeyChange() { state.apiKey = document.getElementById('apiKeyInput').value.trim(); localStorage.setItem('gpt_image2_api_key', state.apiKey); updateApiKeyStatus(); }
+    function onApiKeyChange() { 
+      state.apiKey = document.getElementById('apiKeyInput').value.trim(); 
+      updateApiKeyStatus(); 
+      // 同步到当前预设
+      const preset = getCurrentImagePreset();
+      if (preset) { preset.apiKey = state.apiKey; savePresets(); }
+    }
     function updateApiKeyStatus() {
       const s = document.getElementById('apiKeyStatus');
       s.className = 'api-key-status ' + (state.apiKey ? 'connected' : 'disconnected');
       s.innerHTML = '<span>●</span> ' + (state.apiKey ? '已配置' : '未连接');
     }
     function toggleApiKeyVisibility() { const i = document.getElementById('apiKeyInput'); i.type = i.type === 'password' ? 'text' : 'password'; }
-    function saveBaseUrl() { state.baseUrl = document.getElementById('apiBaseUrl').value.trim().replace(/\/+$/, ''); localStorage.setItem('gpt_image2_base_url', state.baseUrl); }
+    function saveBaseUrl() { 
+      state.baseUrl = document.getElementById('apiBaseUrl').value.trim().replace(/\/+$/, ''); 
+      // 同步到当前预设
+      const preset = getCurrentImagePreset();
+      if (preset) { preset.apiUrl = state.baseUrl; savePresets(); }
+    }
+
+    // ========== Preset System ==========
+    function loadPresets() {
+      try {
+        const saved = localStorage.getItem('gpt_image2_image_presets');
+        if (saved) {
+          state.imagePresets = JSON.parse(saved);
+        }
+      } catch(e) {}
+      if (!state.imagePresets || state.imagePresets.length === 0) {
+        state.imagePresets = JSON.parse(JSON.stringify(DEFAULT_IMAGE_PRESETS));
+        // 旧数据迁移：从旧 localStorage 读取已有的 API Key/URL 填入默认预设
+        const oldKey = localStorage.getItem('gpt_image2_api_key');
+        const oldUrl = localStorage.getItem('gpt_image2_base_url');
+        if (oldKey) state.imagePresets[0].apiKey = oldKey;
+        if (oldUrl) state.imagePresets[0].apiUrl = oldUrl;
+        savePresets();
+        // 清除旧数据避免下次再迁移
+        localStorage.removeItem('gpt_image2_api_key');
+        localStorage.removeItem('gpt_image2_base_url');
+      }
+      // 确保有选中ID
+      if (!state.selectedImagePresetId || !state.imagePresets.find(p => p.id === state.selectedImagePresetId)) {
+        state.selectedImagePresetId = state.imagePresets[0].id;
+      }
+      // 从当前预设同步到legacy字段
+      syncPresetToLegacy();
+    }
+
+    function savePresets() {
+      localStorage.setItem('gpt_image2_image_presets', JSON.stringify(state.imagePresets));
+    }
+
+    function getCurrentImagePreset() {
+      return state.imagePresets.find(p => p.id === state.selectedImagePresetId) || state.imagePresets[0];
+    }
+
+    function syncPresetToLegacy() {
+      const preset = getCurrentImagePreset();
+      if (!preset) return;
+      state.apiKey = preset.apiKey || '';
+      state.baseUrl = preset.apiUrl || 'https://ai.comfly.chat/v1';
+      state.size = preset.size || '1024x1024';
+      state.quality = preset.quality || 'high';
+      state.format = preset.format || 'png';
+      state.compression = preset.compression || 85;
+      state.moderation = preset.moderation || 'auto';
+    }
+
+    function syncLegacyToPresets() {
+      const preset = getCurrentImagePreset();
+      if (!preset) return;
+      preset.apiKey = state.apiKey;
+      preset.apiUrl = state.baseUrl;
+      preset.size = state.size;
+      preset.quality = state.quality;
+      preset.format = state.format;
+      preset.compression = state.compression;
+      preset.moderation = state.moderation;
+      savePresets();
+    }
+
+    function syncPresetToUI() {
+      const preset = getCurrentImagePreset();
+      if (!preset) return;
+
+      // 更新API Key/URL
+      document.getElementById('apiKeyInput').value = preset.apiKey || '';
+      document.getElementById('apiBaseUrl').value = preset.apiUrl || '';
+      updateApiKeyStatus();
+
+      // 更新预设下拉标签
+      document.getElementById('imagePresetLabel').textContent = preset.name;
+
+      // 更新尺寸选择
+      document.querySelectorAll('#sizeGrid .size-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.size === (preset.size || '1024x1024'));
+      });
+      if (state.size !== preset.size) state.size = preset.size;
+
+      // 更新画质
+      const qlMap = {low:'Low', medium:'Medium', high:'High', auto:'Auto'};
+      document.querySelectorAll('#qualitySelect .custom-select-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.value === (preset.quality || 'high'));
+      });
+      const qTrigger = document.querySelector('#qualitySelect .custom-select-trigger span');
+      if (qTrigger) qTrigger.textContent = qlMap[preset.quality] || 'High';
+      const currentQLabel = document.getElementById('currentQualityLabel');
+      if (currentQLabel) currentQLabel.textContent = qlMap[preset.quality] || 'High';
+      if (state.quality !== preset.quality) state.quality = preset.quality;
+
+      // 更新格式
+      document.querySelectorAll('#formatSelect .custom-select-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.value === (preset.format || 'png'));
+      });
+      const fTrigger = document.querySelector('#formatSelect .custom-select-trigger span');
+      if (fTrigger) fTrigger.textContent = ({png:'PNG',jpeg:'JPEG',webp:'WebP'})[preset.format] || 'PNG';
+      if (state.format !== preset.format) state.format = preset.format;
+
+      // 更新压缩
+      if (preset.compression) {
+        document.getElementById('compressionSlider').value = preset.compression;
+        document.getElementById('compressionValue').textContent = preset.compression;
+      }
+      if (state.compression !== preset.compression) state.compression = preset.compression;
+
+      // 更新审核
+      document.querySelectorAll('#moderationSelect .custom-select-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.value === (preset.moderation || 'auto'));
+      });
+      const mTrigger = document.querySelector('#moderationSelect .custom-select-trigger span');
+      if (mTrigger) mTrigger.textContent = ({auto:'Auto', low:'Low'})[preset.moderation] || 'Auto';
+      if (state.moderation !== preset.moderation) state.moderation = preset.moderation;
+
+      updateQualityPrice();
+
+      // 刷新预设下拉选项
+      renderPresetDropdownOptions();
+    }
+
+    // ========== Preset Dropdown ==========
+    let _presetDropdownOpen = null;
+
+    function togglePresetDropdown(type) {
+      const optionsElId = type === 'video' ? 'videoPresetOptions' : 'imagePresetOptions';
+      const optionsEl = document.getElementById(optionsElId);
+      const isOpen = optionsEl.classList.contains('open');
+      document.querySelectorAll('.preset-dropdown-options').forEach(el => el.classList.remove('open'));
+      if (!isOpen) {
+        if (type === 'video') renderVideoPresetDropdownOptions();
+        else renderPresetDropdownOptions();
+        optionsEl.classList.add('open');
+      }
+      _presetDropdownOpen = isOpen ? null : type;
+    }
+
+    function renderPresetDropdownOptions() {
+      const optionsEl = document.getElementById('imagePresetOptions');
+      optionsEl.innerHTML = state.imagePresets.map(p => 
+        `<div class="preset-dropdown-option ${p.id === state.selectedImagePresetId ? 'active' : ''}" onclick="selectPreset('${p.id}')">${escapeHtml(p.name)}</div>`
+      ).join('');
+    }
+
+    function renderVideoPresetDropdownOptions() {
+      const optionsEl = document.getElementById('videoPresetOptions');
+      optionsEl.innerHTML = state.videoPresets.map(p => 
+        `<div class="preset-dropdown-option ${p.id === state.selectedVideoPresetId ? 'active' : ''}" onclick="selectVideoPreset('${p.id}')">${escapeHtml(p.name)}</div>`
+      ).join('');
+    }
+
+    function selectPreset(presetId) {
+      state.selectedImagePresetId = presetId;
+      syncPresetToLegacy();
+      syncPresetToUI();
+      document.querySelectorAll('.preset-dropdown-options').forEach(el => el.classList.remove('open'));
+    }
+
+    function selectVideoPreset(presetId) {
+      state.selectedVideoPresetId = presetId;
+      syncVideoPresetToState();
+      document.querySelectorAll('.preset-dropdown-options').forEach(el => el.classList.remove('open'));
+    }
+
+    // Click outside to close preset dropdown
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.preset-dropdown')) {
+        document.querySelectorAll('.preset-dropdown-options').forEach(el => el.classList.remove('open'));
+      }
+    });
+
+    // ========== Settings Tabs ==========
+    function switchSettingsTab(tab) {
+      document.querySelectorAll('.settings-tab').forEach(el => {
+        el.classList.toggle('active', el.dataset.tab === tab);
+      });
+      document.getElementById('settingsTabImage').style.display = tab === 'image' ? '' : 'none';
+      document.getElementById('settingsTabVideo').style.display = tab === 'video' ? '' : 'none';
+    }
+
+    // ========== Preset Modal (type-aware) ==========
+    let _presetModalType = 'image';
+    let _presetEditId = null;
+
+    function openPresetModal(type) {
+      _presetModalType = type;
+      _presetEditId = null;
+      document.getElementById('presetModalTitle').textContent = type === 'image' ? '管理图像模型预设' : '管理视频模型预设';
+      document.getElementById('presetModalBackdrop').classList.add('open');
+      document.getElementById('presetForm').classList.remove('open');
+      renderPresetModalList();
+    }
+
+    function closePresetModal() {
+      document.getElementById('presetModalBackdrop').classList.remove('open');
+      document.getElementById('presetForm').classList.remove('open');
+      _presetEditId = null;
+    }
+
+    function renderPresetModalList() {
+      const listEl = document.getElementById('presetModalList');
+      const isVideo = _presetModalType === 'video';
+      const presets = isVideo ? state.videoPresets : state.imagePresets;
+      const selectedId = isVideo ? state.selectedVideoPresetId : state.selectedImagePresetId;
+      listEl.innerHTML = presets.map(p => `
+        <div class="preset-list-item ${p.id === selectedId ? 'active' : ''}" onclick="selectPresetInModal('${p.id}')">
+          <span class="preset-list-item-name">${escapeHtml(p.name)}</span>
+          <div class="preset-list-item-actions">
+            <button class="preset-list-item-btn" onclick="event.stopPropagation(); editPreset('${p.id}')" title="编辑">✏️</button>
+            ${presets.length > 1 ? `<button class="preset-list-item-btn danger" onclick="event.stopPropagation(); deletePreset('${p.id}')" title="删除">🗑️</button>` : ''}
+          </div>
+        </div>
+      `).join('') + `
+        <button class="preset-add-btn" onclick="addPreset()">+ 添加新预设</button>
+      `;
+    }
+
+    function selectPresetInModal(id) {
+      if (_presetModalType === 'video') {
+        selectVideoPreset(id);
+      } else {
+        selectPreset(id);
+      }
+      renderPresetModalList();
+      if (_presetModalType === 'video') renderVideoPresetDropdownOptions();
+      else renderPresetDropdownOptions();
+    }
+
+    function addPreset() {
+      _presetEditId = null;
+      const isVideo = _presetModalType === 'video';
+      document.getElementById('presetFormName').value = '';
+      document.getElementById('presetFormKey').value = '';
+      document.getElementById('presetFormUrl').value = isVideo ? 'https://new2api.scd666.com' : 'https://ai.comfly.chat/v1';
+      document.getElementById('presetFormSize').value = isVideo ? '1280x720' : '1024x1024';
+      document.getElementById('presetFormSaveBtn').textContent = '添加';
+      document.getElementById('presetForm').classList.add('open');
+    }
+
+    function editPreset(id) {
+      _presetEditId = id;
+      const isVideo = _presetModalType === 'video';
+      const presets = isVideo ? state.videoPresets : state.imagePresets;
+      const preset = presets.find(p => p.id === id);
+      if (!preset) return;
+      document.getElementById('presetFormName').value = preset.name;
+      document.getElementById('presetFormKey').value = preset.apiKey || '';
+      document.getElementById('presetFormUrl').value = preset.apiUrl || '';
+      document.getElementById('presetFormSize').value = preset.size || (isVideo ? '1280x720' : '1024x1024');
+      document.getElementById('presetFormSaveBtn').textContent = '保存';
+      document.getElementById('presetForm').classList.add('open');
+    }
+
+    function cancelPresetForm() {
+      document.getElementById('presetForm').classList.remove('open');
+      _presetEditId = null;
+    }
+
+    function savePresetForm() {
+      const name = document.getElementById('presetFormName').value.trim();
+      if (!name) { showToast('请输入模型名称', 'warning'); return; }
+      const isVideo = _presetModalType === 'video';
+      const presets = isVideo ? state.videoPresets : state.imagePresets;
+
+      if (_presetEditId) {
+        const preset = presets.find(p => p.id === _presetEditId);
+        if (preset) {
+          preset.name = name;
+          preset.apiKey = document.getElementById('presetFormKey').value.trim();
+          preset.apiUrl = document.getElementById('presetFormUrl').value.trim() || (isVideo ? 'https://new2api.scd666.com' : 'https://ai.comfly.chat/v1');
+          preset.size = document.getElementById('presetFormSize').value.trim() || (isVideo ? '1280x720' : '1024x1024');
+        }
+      } else {
+        const newPreset = {
+          id: (isVideo ? 'vpreset-' : 'preset-') + Date.now(),
+          name: name,
+          apiKey: document.getElementById('presetFormKey').value.trim(),
+          apiUrl: document.getElementById('presetFormUrl').value.trim() || (isVideo ? 'https://new2api.scd666.com' : 'https://ai.comfly.chat/v1'),
+          size: document.getElementById('presetFormSize').value.trim() || (isVideo ? '1280x720' : '1024x1024'),
+          quality: isVideo ? undefined : 'high',
+          format: isVideo ? undefined : 'png',
+          compression: isVideo ? undefined : 85,
+          moderation: isVideo ? undefined : 'auto'
+        };
+        presets.push(newPreset);
+      }
+      if (isVideo) saveVideoPresets(); else savePresets();
+      document.getElementById('presetForm').classList.remove('open');
+      _presetEditId = null;
+      renderPresetModalList();
+      if (isVideo) { syncVideoPresetToState(); renderVideoPresetDropdownOptions(); }
+      else { syncPresetToUI(); renderPresetDropdownOptions(); }
+      showToast('预设已保存', 'success');
+    }
+
+    function deletePreset(id) {
+      const isVideo = _presetModalType === 'video';
+      const presets = isVideo ? state.videoPresets : state.imagePresets;
+      if (presets.length <= 1) {
+        showToast('至少保留一个预设', 'warning');
+        return;
+      }
+      if (isVideo) {
+        state.videoPresets = state.videoPresets.filter(p => p.id !== id);
+        if (state.selectedVideoPresetId === id) {
+          state.selectedVideoPresetId = state.videoPresets[0].id;
+        }
+        syncVideoPresetToState();
+        saveVideoPresets();
+      } else {
+        state.imagePresets = state.imagePresets.filter(p => p.id !== id);
+        if (state.selectedImagePresetId === id) {
+          state.selectedImagePresetId = state.imagePresets[0].id;
+        }
+        syncPresetToUI();
+        savePresets();
+      }
+      renderPresetModalList();
+      showToast('预设已删除', 'success');
+    }
+
+    // ========== Model Name Helper ==========
+    function getCurrentModelName() {
+      if (state.mode === 'video') {
+        const preset = getCurrentVideoPreset();
+        return preset ? preset.name : 'omni_flash-10s-z';
+      }
+      const preset = getCurrentImagePreset();
+      return preset ? preset.name : 'gpt-image-2';
+    }
+
+    // ========== Video Preset System ==========
+    function getCurrentVideoPreset() {
+      return state.videoPresets.find(p => p.id === state.selectedVideoPresetId) || state.videoPresets[0];
+    }
+
+    function loadVideoPresets() {
+      try {
+        const raw = localStorage.getItem('gpt_image2_video_presets');
+        if (raw) {
+          state.videoPresets = JSON.parse(raw);
+          if (!state.videoPresets || state.videoPresets.length === 0) {
+            state.videoPresets = JSON.parse(JSON.stringify(DEFAULT_VIDEO_PRESETS));
+          }
+        } else {
+          state.videoPresets = JSON.parse(JSON.stringify(DEFAULT_VIDEO_PRESETS));
+        }
+      } catch(e) {
+        state.videoPresets = JSON.parse(JSON.stringify(DEFAULT_VIDEO_PRESETS));
+      }
+      // 恢复选中的视频预设
+      try {
+        const savedId = localStorage.getItem('gpt_image2_selected_video_preset');
+        state.selectedVideoPresetId = savedId && state.videoPresets.some(p => p.id === savedId) ? savedId : state.videoPresets[0].id;
+      } catch(e) {
+        state.selectedVideoPresetId = state.videoPresets[0].id;
+      }
+      syncVideoPresetToState();
+    }
+
+    function saveVideoPresets() {
+      try {
+        localStorage.setItem('gpt_image2_video_presets', JSON.stringify(state.videoPresets));
+        localStorage.setItem('gpt_image2_selected_video_preset', state.selectedVideoPresetId);
+      } catch(e) {}
+    }
+
+    function syncVideoPresetToState() {
+      const preset = getCurrentVideoPreset();
+      if (!preset) return;
+      state.videoApiKey = preset.apiKey || state.videoApiKey || '';
+      state.videoBaseUrl = preset.apiUrl || state.videoBaseUrl || 'https://new2api.scd666.com';
+      state.videoSize = preset.size || state.videoSize || '1280x720';
+
+      // Update UI
+      const labelEl = document.getElementById('videoPresetLabel');
+      if (labelEl) labelEl.textContent = preset.name;
+      const keyEl = document.getElementById('videoApiKeyInput');
+      if (keyEl) keyEl.value = state.videoApiKey;
+      const urlEl = document.getElementById('videoApiBaseUrl');
+      if (urlEl) urlEl.value = state.videoBaseUrl;
+      updateVideoApiKeyStatus();
+      updateVideoSizeUI();
+    }
+
+    // ========== Video API Key Management ==========
+    function onVideoApiKeyChange() {
+      const val = document.getElementById('videoApiKeyInput').value.trim();
+      state.videoApiKey = val;
+      const preset = getCurrentVideoPreset();
+      if (preset) preset.apiKey = val;
+      saveVideoPresets();
+      updateVideoApiKeyStatus();
+    }
+
+    function toggleVideoApiKeyVisibility() {
+      const input = document.getElementById('videoApiKeyInput');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function saveVideoBaseUrl() {
+      const val = document.getElementById('videoApiBaseUrl').value.trim();
+      if (val) {
+        state.videoBaseUrl = val.replace(/\/+$/, '');
+        const preset = getCurrentVideoPreset();
+        if (preset) preset.apiUrl = state.videoBaseUrl;
+        saveVideoPresets();
+      }
+    }
+
+    function updateVideoApiKeyStatus() {
+      const statusEl = document.getElementById('videoApiKeyStatus');
+      if (statusEl) {
+        const hasKey = !!state.videoApiKey;
+        statusEl.className = 'api-key-status ' + (hasKey ? 'connected' : 'disconnected');
+        statusEl.innerHTML = hasKey ? '<span>●</span> 已配置' : '<span>●</span> 未配置';
+      }
+    }
+
+    // ========== Mode Switching ==========
+    function switchMode(mode) {
+      if (state.mode === mode) return;
+      // 取消所有视频轮询
+      if (mode === 'image') {
+        Object.values(state.videoPollIntervals).forEach(id => clearInterval(id));
+        state.videoPollIntervals = {};
+      }
+      state.mode = mode;
+      localStorage.setItem('gpt_image2_mode', mode);
+      applyModeUI();
+    }
+
+    function applyModeUI() {
+      const isVideo = state.mode === 'video';
+
+      // 更新模式下拉
+      document.getElementById('currentModeIcon').textContent = isVideo ? '🎬' : '🎨';
+      document.getElementById('currentModeLabel').textContent = isVideo ? '生视频' : '生图';
+      document.querySelectorAll('#modeDropdown .mode-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.mode === state.mode);
+      });
+
+      // 如果从视频切到图像模式，且参考图超过4张，截断
+      if (!isVideo && state.referenceImages.length > 4) {
+        state.referenceImages = state.referenceImages.slice(0, 4);
+        updateRefImagePreview();
+        showToast('已保留前4张参考图', 'warning');
+      }
+
+      // 输入框 placeholder
+      document.getElementById('promptInput').placeholder = isVideo
+        ? '描述你想要的视频，按 Enter 发送...'
+        : '描述你想要的图像，按 Enter 发送...';
+
+      // 参考图标签
+      const refLabel = document.getElementById('refLabel');
+      if (refLabel) refLabel.textContent = isVideo ? '参考图(最多7张)' : '参考图(最多4张)';
+
+      // 工具栏：隐藏/显示图像/视频专用按钮
+      document.getElementById('qualityPill').style.display = isVideo ? 'none' : '';
+      document.getElementById('countDropdownWrap').style.display = isVideo ? 'none' : '';
+
+      // 更新尺寸标签
+      if (isVideo) {
+        document.getElementById('currentSizeLabel').textContent = state.videoSize.replace('x', '×');
+        // 更新视频设置面板尺寸选中状态
+        document.querySelectorAll('#videoSizeGrid .size-option').forEach(opt => {
+          opt.classList.toggle('selected', opt.dataset.size === state.videoSize);
+        });
+      } else {
+        document.getElementById('currentSizeLabel').textContent = state.size.replace('x', '×');
+      }
+
+      // 空状态
+      updateEmptyState();
+
+      // 设置面板 - 如果当前是视频模式但有图像设置打开，切换到视频设置
+      const settingsTabVideo = document.getElementById('settingsTabVideo');
+      const settingsTabImage = document.getElementById('settingsTabImage');
+      if (settingsTabVideo.style.display !== 'none' || settingsTabImage.style.display !== 'none') {
+        switchSettingsTab(isVideo ? 'video' : 'image');
+      }
+    }
+
+    function updateEmptyState() {
+      const isVideo = state.mode === 'video';
+      document.getElementById('emptyStateHero').textContent = isVideo ? '🎬' : '🎨';
+      document.getElementById('emptyStateTitle').textContent = isVideo ? '创建视频' : '创建图像';
+      document.getElementById('emptyStateDesc').textContent = isVideo
+        ? '描述你想要的视频，Omni 视频模型为你生成精彩片段。'
+        : '描述你想要的图像，像聊天一样发送提示词，GPT Image 2 为你逐张生成。';
+      document.getElementById('imageSuggestions').style.display = isVideo ? 'none' : '';
+      document.getElementById('videoSuggestions').style.display = isVideo ? '' : 'none';
+    }
+
+    // ========== Video Size ==========
+    function toggleVideoSizeDropdown(event) {
+      event.stopPropagation();
+      const dd = document.getElementById('videoSizeDropdown');
+      const isOpen = dd.classList.contains('open');
+      document.querySelectorAll('.count-dropdown.open').forEach(el => el.classList.remove('open'));
+      if (!isOpen) {
+        const btn = document.getElementById('videoSizeDropdownWrap').querySelector('.toolbar-pill');
+        const rect = btn.getBoundingClientRect();
+        dd.style.position = 'fixed';
+        dd.style.top = (rect.bottom + 4) + 'px';
+        dd.style.left = rect.left + 'px';
+        dd.style.minWidth = rect.width + 'px';
+        dd.classList.add('open');
+      }
+    }
+
+    function selectVideoSize(size) {
+      state.videoSize = size;
+      document.getElementById('currentSizeLabel').textContent = size.replace('x', '×');
+      // 同步到预设
+      const preset = getCurrentVideoPreset();
+      if (preset) preset.size = size;
+      saveVideoPresets();
+      updateVideoSizeUI();
+      document.querySelectorAll('.count-dropdown.open').forEach(el => el.classList.remove('open'));
+    }
+
+    function selectVideoSizeSetting(opt) {
+      selectVideoSize(opt.dataset.size);
+      document.querySelectorAll('#videoSizeGrid .size-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+    }
+
+    function updateVideoSizeUI() {
+      if (state.mode === 'video') {
+        document.getElementById('currentSizeLabel').textContent = state.videoSize.replace('x', '×');
+      }
+      // 更新视频设置面板尺寸选中状态
+      document.querySelectorAll('#videoSizeGrid .size-option').forEach(o => {
+        o.classList.toggle('selected', o.dataset.size === state.videoSize);
+      });
+    }
+
+    // ========== Video API Calls ==========
+    async function callVideoAPI(prompt, refImages) {
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const apiKey = state.videoApiKey;
+      const size = state.videoSize;
+
+      // 有参考图时用 form-data
+      if (refImages && refImages.length > 0) {
+        const formData = new FormData();
+        formData.append('model', getCurrentModelName());
+        formData.append('prompt', prompt);
+        formData.append('size', size);
+
+        for (const src of refImages) {
+          try {
+            if (src.startsWith('data:')) {
+              const parts = src.split(',');
+              const mime = src.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
+              const binaryStr = atob(parts[1]);
+              const bytes = new Uint8Array(binaryStr.length);
+              for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+              const blob = new Blob([bytes], { type: mime });
+              formData.append('input_reference[]', blob, 'ref.jpg');
+            } else {
+              // URL → fetch → blob
+              const resp = await fetch(src);
+              if (!resp.ok) continue;
+              const blob = await resp.blob();
+              formData.append('input_reference[]', blob, 'ref.jpg');
+            }
+          } catch(e) {
+            console.error('Reference image fetch error:', e);
+          }
+        }
+
+        const response = await fetch(baseUrl + '/v1/videos', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + apiKey },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          let errMsg = 'HTTP ' + response.status;
+          let errHint = '';
+          try { const d = await response.json(); errMsg = d.error?.message || errMsg; } catch(e) {}
+          if (response.status === 401) errHint = '请检查视频 API Key';
+          else if (response.status === 429) errHint = '请求过于频繁';
+          const err = new Error(errMsg);
+          err.hint = errHint;
+          throw err;
+        }
+        return await response.json();
+      }
+
+      // 无参考图：JSON
+      const response = await fetch(baseUrl + '/v1/videos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey,
+        },
+        body: JSON.stringify({
+          model: getCurrentModelName(),
+          prompt: prompt,
+          size: size,
+        }),
+      });
+
+      if (!response.ok) {
+        let errMsg = 'HTTP ' + response.status;
+        let errHint = '';
+        try { const d = await response.json(); errMsg = d.error?.message || errMsg; } catch(e) {}
+        if (response.status === 401) errHint = '请检查视频 API Key';
+        else if (response.status === 429) errHint = '请求过于频繁';
+        const err = new Error(errMsg);
+        err.hint = errHint;
+        throw err;
+      }
+      return await response.json();
+    }
+
+    async function pollVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const apiKey = state.videoApiKey;
+      let pollCount = 0;
+      const maxPolls = 120; // Max 10 min (at 5s intervals)
+
+      const intervalId = setInterval(async () => {
+        pollCount++;
+        if (pollCount > maxPolls) {
+          clearInterval(intervalId);
+          delete state.videoPollIntervals[taskId];
+          replaceWithVideoError(genId, '视频生成超时，请重试', '', prompt);
+          return;
+        }
+
+        try {
+          const response = await fetch(baseUrl + '/v1/videos/' + taskId, {
+            headers: { 'Authorization': 'Bearer ' + apiKey },
+          });
+          if (!response.ok) {
+            clearInterval(intervalId);
+            delete state.videoPollIntervals[taskId];
+            replaceWithVideoError(genId, '查询状态失败: HTTP ' + response.status, '', prompt);
+            return;
+          }
+          const data = await response.json();
+          console.log('[Video Poll]', taskId, data.status, data.progress);
+
+          updateVideoGeneratingProgress(genId, data.status, data.progress);
+
+          if (data.status === 'completed') {
+            clearInterval(intervalId);
+            delete state.videoPollIntervals[taskId];
+            replaceWithVideo(genId, data.video_url, prompt, data.size, refImageSrcs, targetConvId, data);
+          } else if (data.status === 'failed') {
+            clearInterval(intervalId);
+            delete state.videoPollIntervals[taskId];
+            const errMsg = data.error?.message || '视频生成失败';
+            replaceWithVideoError(genId, errMsg, '', prompt);
+          }
+          // queued / processing → continue polling
+        } catch (err) {
+          console.error('Poll error:', err);
+          // Don't stop on network error, keep polling
+        }
+      }, 5000);
+
+      state.videoPollIntervals[taskId] = intervalId;
+      return intervalId;
+    }
+
+    // ========== Video Generating Card ==========
+    function addVideoGeneratingMessage(prompt, refImageSrcs) {
+      const container = document.getElementById('messagesContainer');
+      const div = document.createElement('div');
+      const id = ++state.msgIdCounter;
+      div.id = 'msg-' + id;
+      div.className = 'message message-assistant';
+
+      const refSrcArray = Array.isArray(refImageSrcs) ? refImageSrcs : (refImageSrcs ? [refImageSrcs] : []);
+      const refBadges = refSrcArray.length > 0
+        ? refSrcArray.map((src, idx) => {
+            const srcAttr = escapeHtml(src);
+            return `<span class="generating-ref-badge" data-lightbox-src="${srcAttr}" data-lightbox-prompt="参考图 ${idx+1}" onclick="openLightboxFromEl(this)" title="点击查看参考图 ${idx+1}"><img src="${srcAttr}" alt="参考图">参考图 ${refSrcArray.length > 1 ? (idx+1) : ''}</span>`;
+          }).join('')
+        : '';
+
+      div.innerHTML = `
+        <div class="message-inner">
+          <div class="assistant-avatar">✦</div>
+          <div class="assistant-content">
+            <div class="video-generating" id="video-gen-card-${id}">
+              <div class="video-generating-header">
+                <span class="prompt-text">${escapeHtml(prompt)}</span>
+                <div class="meta-tags" style="flex-wrap:wrap;gap:4px;">
+                  <span class="meta-tag">${getCurrentModelName()} · ${state.videoSize.replace('x','×')}</span>
+                  ${refBadges}
+                </div>
+              </div>
+              <div class="video-progress-bar">
+                <div class="video-progress-fill" id="video-progress-fill-${id}"></div>
+              </div>
+              <div class="video-generating-status">
+                <span class="dot" style="background:var(--accent-green);"></span>
+                <span id="video-gen-status-${id}">排队中...</span>
+              </div>
+              <div class="video-progress-text" id="video-gen-progress-${id}">0%</div>
+              <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
+                <span class="timer" id="gen-timer-${id}" style="font-size:12px;color:var(--text-tertiary);margin-right:auto;">0s</span>
+                <button class="generating-cancel-link" onclick="cancelVideoGeneration('${id}')">取消生成</button>
+                <button class="generating-cancel-link" onclick="deleteMessage(${id}, event)" style="color:var(--text-tertiary);">删除</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      container.appendChild(div);
+      checkEmpty();
+      scrollToBottom();
+
+      // Add to conversation
+      const msg = {
+        id: id,
+        role: 'assistant',
+        type: 'generating',
+        content: prompt,
+        createdAt: Date.now(),
+        refImageSrcs: refSrcArray,
+        videoSize: state.videoSize,
+        videoModel: getCurrentModelName(),
+        batchId: 'video-batch-' + Date.now(),
+      };
+      state.messages.push(msg);
+
+      if (state.activeConvId) {
+        const conv = state.conversations.find(c => c.id === state.activeConvId);
+        if (conv) {
+          conv.messages.push(JSON.parse(JSON.stringify(msg)));
+          conv.updatedAt = Date.now();
+        }
+      }
+      persistConversations();
+
+      // Start timer
+      const timerStart = Date.now();
+      const timerInterval = setInterval(() => {
+        const el = document.getElementById('gen-timer-' + id);
+        if (el) el.textContent = Math.floor((Date.now() - timerStart) / 1000) + 's';
+        smartScrollToBottom();
+      }, 1000);
+
+      // Register timer for cleanup
+      if (!state._videoTimers) state._videoTimers = {};
+      state._videoTimers[id] = timerInterval;
+
+      return id;
+    }
+
+    function updateVideoGeneratingProgress(genId, status, progress) {
+      const fillEl = document.getElementById('video-progress-fill-' + genId);
+      if (fillEl) fillEl.style.width = (progress || 0) + '%';
+
+      const textEl = document.getElementById('video-gen-progress-' + genId);
+      if (textEl) textEl.textContent = (progress || 0) + '%';
+
+      const statusEl = document.getElementById('video-gen-status-' + genId);
+      if (statusEl) {
+        const statusMap = { queued: '排队中...', processing: '生成中...', completed: '已完成', failed: '失败' };
+        statusEl.textContent = statusMap[status] || status;
+      }
+    }
+
+    // ========== Replace Video Generating with Result ==========
+    function replaceWithVideo(genId, videoUrl, prompt, size, refImageSrcs, targetConvId, apiData) {
+      const div = document.getElementById('msg-' + genId);
+      const isVisible = state.activeConvId === targetConvId;
+
+      // Update conversation
+      const conv = state.conversations.find(c => c.id === targetConvId);
+      const convMsg = conv?.messages?.find(m => m.id === genId);
+      const stateMsg = state.messages.find(m => m.id === genId);
+
+      if (convMsg) {
+        convMsg.type = 'video';
+        convMsg.videoUrl = videoUrl;
+        convMsg.content = prompt;
+        convMsg.videoSize = size || state.videoSize;
+        convMsg.refImageSrcs = refImageSrcs || [];
+        conv.updatedAt = Date.now();
+      }
+      if (stateMsg && convMsg) {
+        Object.keys(convMsg).forEach(k => { stateMsg[k] = convMsg[k]; });
+        stateMsg.type = 'video';
+      }
+
+      // Cleanup timer
+      if (state._videoTimers && state._videoTimers[genId]) {
+        clearInterval(state._videoTimers[genId]);
+        delete state._videoTimers[genId];
+      }
+
+      if (div && isVisible) {
+        div.innerHTML = renderVideoCard(genId, videoUrl, prompt, size, refImageSrcs, convMsg?.createdAt);
+      }
+
+      updateHistory();
+      if (isVisible) smartScrollToBottom();
+    }
+
+    function replaceWithVideoError(genId, errMsg, errHint, prompt) {
+      const div = document.getElementById('msg-' + genId);
+      if (!div) return;
+
+      // Cleanup timer
+      if (state._videoTimers && state._videoTimers[genId]) {
+        clearInterval(state._videoTimers[genId]);
+        delete state._videoTimers[genId];
+      }
+
+      // Update state
+      const stateMsg = state.messages.find(m => m.id === genId);
+      if (stateMsg) stateMsg.type = 'error';
+
+      div.innerHTML = `
+        <div class="message-inner">
+          <div class="assistant-avatar">✦</div>
+          <div class="assistant-content">
+            <div class="error-result">
+              <div class="error-result-title">⚠️ 视频生成失败</div>
+              <div class="error-result-msg">${escapeHtml(errMsg)}</div>
+              ${errHint ? '<div class="error-result-hint">' + escapeHtml(errHint) + '</div>' : ''}
+              <button class="error-result-retry" data-msg-id="${genId}" data-prompt="${escapeHtml(prompt).replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔄 重试</button>
+            </div>
+          </div>
+        </div>`;
+
+      updateHistory();
+      smartScrollToBottom();
+    }
+
+    // ========== Video Result Card ==========
+    function renderVideoCard(msgId, videoUrl, prompt, size, refImageSrcs, createdAt) {
+      const safePrompt = escapeHtml(prompt).replace(/'/g, "\\'");
+      const safePromptAttr = escapeHtml(prompt).replace(/"/g, '&quot;');
+      const isVertical = (size || state.videoSize).startsWith('720x');
+
+      let dateTag = '';
+      if (createdAt) {
+        const d = new Date(createdAt);
+        const now = new Date();
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        dateTag = `${month}月${day}日 ${hours}:${mins}`;
+      }
+
+      const refSrcArray = Array.isArray(refImageSrcs) ? refImageSrcs : (refImageSrcs ? [refImageSrcs] : []);
+      const refBadges = refSrcArray.length > 0
+        ? refSrcArray.map((src, idx) => {
+            const srcAttr = escapeHtml(src);
+            return `<span class="generating-ref-badge" data-lightbox-src="${srcAttr}" data-lightbox-prompt="参考图 ${idx+1}" onclick="openLightboxFromEl(this)" title="点击查看参考图 ${idx+1}"><img src="${srcAttr}" alt="参考图">参考图 ${refSrcArray.length > 1 ? (idx+1) : ''}</span>`;
+          }).join('')
+        : '';
+
+      return `
+        <div class="message-inner">
+          <div class="assistant-avatar">✦</div>
+          <div class="assistant-content">
+            <div class="video-result" id="video-card-${msgId}">
+              <div class="image-result-header">
+                <span class="prompt-text">${escapeHtml(prompt)}</span>
+                <div class="meta-tags">
+                  ${size ? '<span class="meta-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>' + size.replace('x','×') + '</span>' : ''}
+                  <span class="meta-tag">🎬 视频</span>
+                  ${dateTag ? '<span class="meta-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' + dateTag + '</span>' : ''}
+                  ${refBadges}
+                </div>
+              </div>
+              <div class="video-player-wrap${isVertical ? ' video-vertical' : ''}">
+                <video id="video-player-${msgId}" src="${escapeHtml(videoUrl)}" controls preload="metadata" style="width:100%;height:100%;object-fit:contain;"
+                  onerror="this.parentElement.innerHTML='<div style=width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);><span>⚠️ 视频加载失败</span></div>'">
+                  您的浏览器不支持视频播放
+                </video>
+              </div>
+              <div class="image-result-footer">
+                <div class="image-result-footer-left">
+                  <button class="image-result-footer-btn" data-msg-id="${msgId}" data-prompt="${safePromptAttr}" onclick="reusePromptFromCard(parseInt(this.dataset.msgId), this.dataset.prompt, event)" title="复用提示词">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/></svg>
+                    复用提示词
+                  </button>
+                  <button class="image-result-footer-btn" data-msg-id="${msgId}" data-prompt="${safePromptAttr}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)" title="再次生成">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    再次生成
+                  </button>
+                </div>
+                <div class="image-result-footer-right">
+                  <button class="image-result-icon-btn" data-video-url="${escapeHtml(videoUrl)}" data-prompt="${safePromptAttr}" onclick="downloadVideo(this.dataset.videoUrl, this.dataset.prompt, event)" title="下载视频">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </button>
+                  <button class="image-result-icon-btn" data-prompt="${safePromptAttr}" onclick="copyPromptFromCard(this.dataset.prompt, event)" title="复制提示词">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                  <button class="image-result-icon-btn image-result-delete-btn" onclick="deleteMessage(${msgId}, event)" title="删除">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ========== Cancel Video Generation ==========
+    function cancelVideoGeneration(genId) {
+      const msg = state.messages.find(m => m.id === genId);
+      if (msg && msg.videoTaskId) {
+        const intervalId = state.videoPollIntervals[msg.videoTaskId];
+        if (intervalId) {
+          clearInterval(intervalId);
+          delete state.videoPollIntervals[msg.videoTaskId];
+        }
+      }
+      // Cleanup timer
+      if (state._videoTimers && state._videoTimers[genId]) {
+        clearInterval(state._videoTimers[genId]);
+        delete state._videoTimers[genId];
+      }
+      const div = document.getElementById('msg-' + genId);
+      if (div) div.remove();
+      // Remove from messages
+      state.messages = state.messages.filter(m => m.id !== genId);
+      if (state.activeConvId) {
+        const conv = state.conversations.find(c => c.id === state.activeConvId);
+        if (conv) {
+          conv.messages = conv.messages.filter(m => m.id !== genId);
+        }
+      }
+      persistConversations();
+      checkEmpty();
+      showToast('已取消', 'warning');
+    }
+
+    // ========== Video Download ==========
+    function downloadVideo(videoUrl, prompt, event) {
+      if (event) event.stopPropagation();
+      const nameHint = prompt ? sanitizeFileName(prompt).slice(0, 30) : 'video';
+      const filename = nameHint + '-' + Date.now() + '.mp4';
+
+      // Try proxy download
+      const proxyUrl = '/api/proxy-video?url=' + encodeURIComponent(videoUrl);
+      fetch(proxyUrl).then(r => {
+        if (!r.ok) throw new Error('下载失败');
+        return r.blob();
+      }).then(blob => {
+        const u = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = u;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(u);
+        showToast('视频下载中...', 'success');
+      }).catch(() => {
+        showToast('下载失败，正在尝试直接打开...', 'warning');
+        window.open(videoUrl, '_blank');
+      });
+    }
 
     // ========== Reference Image ==========
     function selectReferenceImage() {
-      if (state.referenceImages.length >= 4) {
-        showToast('最多支持 4 张参考图', 'warning');
+      const maxRefs = state.mode === 'video' ? 7 : 4;
+      if (state.referenceImages.length >= maxRefs) {
+        showToast(`最多支持 ${maxRefs} 张参考图`, 'warning');
         return;
       }
       document.getElementById('refImageInput').click();
@@ -2766,11 +4361,12 @@
     function handleReferenceFiles(files) {
       if (files.length === 0) return;
 
-      const remaining = 4 - state.referenceImages.length;
+      const maxRefs = state.mode === 'video' ? 7 : 4;
+      const remaining = maxRefs - state.referenceImages.length;
       const toAdd = files.slice(0, remaining);
 
       if (files.length > remaining) {
-        showToast(`最多支持 4 张参考图，已添加 ${toAdd.length} 张`, 'warning');
+        showToast(`最多支持 ${maxRefs} 张参考图，已添加 ${toAdd.length} 张`, 'warning');
       }
 
       // 过滤有效文件
@@ -2836,7 +4432,8 @@
           html += `<div class="ref-image-item"><div class="ref-image-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);color:var(--text-tertiary);font-size:11px;"><span class="dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent-green);animation:pulse 1s infinite;margin-right:4px;"></span>上传中</div></div>`;
         }
         list.innerHTML = html;
-        info.textContent = `${state.referenceImages.length}/4 参考图`;
+        const maxRefs = state.mode === 'video' ? 7 : 4;
+        info.textContent = `${state.referenceImages.length}/${maxRefs} 参考图`;
         preview.classList.add('active');
         document.getElementById('refImageBtn').style.borderColor = 'var(--accent-green)';
         document.getElementById('refImageBtn').style.color = 'var(--accent-green)';

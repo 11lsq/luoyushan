@@ -65,6 +65,39 @@ app.get('/api/proxy-image', async (req, res) => {
   }
 });
 
+// 视频代理下载接口（解决 CORS 跨域 + 大文件流式传输）
+app.get('/api/proxy-video', async (req, res) => {
+  const videoUrl = req.query.url;
+  if (!videoUrl) return res.status(400).json({ error: 'Missing url parameter' });
+
+  try {
+    const response = await fetch(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      },
+    });
+    if (!response.ok) return res.status(response.status).json({ error: 'Failed to fetch video' });
+
+    const contentType = response.headers.get('content-type') || 'video/mp4';
+    const contentLength = response.headers.get('content-length');
+    res.setHeader('Content-Type', contentType);
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Stream the video
+    const reader = response.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+    res.end();
+  } catch (e) {
+    console.error('[proxy-video] Error:', e.message);
+    res.status(500).json({ error: 'Proxy fetch failed' });
+  }
+});
+
 // 参考图删除接口
 app.delete('/api/upload-ref-image/:filename', (req, res) => {
   const filepath = path.join(uploadDir, req.params.filename);
