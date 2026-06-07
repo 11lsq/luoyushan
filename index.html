@@ -3332,37 +3332,45 @@
       syncLegacyToPresets();
     }
     // ========== Dynamic Size Grid ==========
-    const DEFAULT_COMFLY_SIZES = ['1024x1024','1536x1024','1024x1536','1080x1920','2048x2048','2048x1152','1152x2048','3840x2160'];
+    const SIZE_OPTIONS = [
+      { size: '1024x1024', ratio: '1:1', level: '1K' },
+      { size: '1536x1024', ratio: '3:2', level: '横' },
+      { size: '1024x1536', ratio: '2:3', level: '竖' },
+      { size: '1080x1920', ratio: '9:16', level: '竖' },
+      { size: '2048x2048', ratio: '1:1', level: '2K', highlight: true },
+      { size: '2048x1152', ratio: '16:9', level: '2K', highlight: true },
+      { size: '1152x2048', ratio: '9:16', level: '2K', highlight: true },
+      { size: '3840x2160', ratio: '16:9', level: '4K', highlight: true },
+    ];
 
     function renderSizeGrid(preset) {
       const grid = document.getElementById('sizeGrid');
       if (!grid) return;
-      const sizes = (preset && preset.availableSizes && preset.availableSizes.length > 0)
-        ? preset.availableSizes
-        : DEFAULT_COMFLY_SIZES;
-      const currentSize = state.size || (preset && preset.size) || '1024x1024';
 
-      grid.innerHTML = sizes.map(s => {
-        const [w, h] = s.split('x').map(Number);
-        const ratio = w / h;
-        let label = '';
-        if (ratio > 2) label = '宽屏';
-        else if (ratio > 1.3) label = '横';
-        else if (ratio > 0.9) label = '1:1';
-        else if (ratio > 0.5) label = '竖';
-        else label = '超竖';
-        // estimate K level
-        const totalK = Math.round((w * h) / 1000000);
-        if (totalK >= 4) label += ' · 4K';
-        else if (totalK >= 2) label += ' · 2K';
+      // g_yb 仅支持 1K，过滤掉 2K/4K 选项
+      const isOnly1K = preset && preset.name === 'gpt-image-2-g_yb';
+      const options = isOnly1K
+        ? SIZE_OPTIONS.filter(o => {
+            const [w, h] = o.size.split('x').map(Number);
+            return w * h < 2000000;
+          })
+        : SIZE_OPTIONS;
 
-        const iconW = Math.min(32, Math.max(14, Math.round(28 * ratio)));
-        const iconH = Math.min(32, Math.max(14, Math.round(28 / ratio)));
-        const is4K = totalK >= 4;
+      // 如果当前 size 不在可选项中，回退到第一个
+      const currentSize = (options.find(o => o.size === state.size) ? state.size : options[0].size);
+      if (state.size !== currentSize) { state.size = currentSize; syncLegacyToPresets(); }
 
-        return `<div class="size-option${s === currentSize ? ' selected' : ''}" data-size="${s}" onclick="selectSize(this)">
-          <div class="size-option-icon" style="width:${iconW}px;height:${iconH}px;${is4K ? 'border-color:var(--accent-purple);' : ''}"></div>
-          <div class="size-option-label">${s.replace('x','×')}${' | ' + label}</div>
+      grid.innerHTML = options.map(opt => {
+        const { size, ratio, level, highlight } = opt;
+        const is4K = size.startsWith('3840');
+        const [w, h] = size.split('x').map(Number);
+        const r = w / h;
+        const iconW = Math.min(32, Math.max(14, Math.round(28 * r)));
+        const iconH = Math.min(32, Math.max(14, Math.round(28 / r)));
+
+        return `<div class="size-option${size === currentSize ? ' selected' : ''}" data-size="${size}" onclick="selectSize(this)">
+          <div class="size-option-icon" style="width:${iconW}px;height:${iconH}px;${highlight ? 'border-color:var(--accent-purple);' : ''}"></div>
+          <div class="size-option-label">${ratio} · ${level}</div>
         </div>`;
       }).join('');
     }
@@ -3507,6 +3515,16 @@
         // 清除旧数据避免下次再迁移
         localStorage.removeItem('gpt_image2_api_key');
         localStorage.removeItem('gpt_image2_base_url');
+      } else {
+        // 合并新预设：把 DEFAULT 里有但本地没有的预设追加进去
+        let changed = false;
+        DEFAULT_IMAGE_PRESETS.forEach(defP => {
+          if (!state.imagePresets.find(p => p.id === defP.id)) {
+            state.imagePresets.push(JSON.parse(JSON.stringify(defP)));
+            changed = true;
+          }
+        });
+        if (changed) savePresets();
       }
       // 确保有选中ID
       if (!state.selectedImagePresetId || !state.imagePresets.find(p => p.id === state.selectedImagePresetId)) {
