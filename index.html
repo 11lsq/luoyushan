@@ -2633,6 +2633,14 @@
 
     // ========== Helpers ==========
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    async function safeJson(response, label) {
+      const text = await response.text();
+      if (text.startsWith('<!') || text.startsWith('<html')) {
+        console.error(`[${label}] Got HTML instead of JSON:`, text.slice(0, 200));
+        throw new Error('API 返回了网页而非 JSON，请检查 API 地址是否正确');
+      }
+      return JSON.parse(text);
+    }
     function updateProgress(genId, done, total) {
       const el = document.getElementById('gen-progress-' + genId);
       if (el) el.textContent = done + '/' + total;
@@ -4104,7 +4112,7 @@
         err.hint = errHint;
         throw err;
       }
-      return await response.json();
+      return await safeJson(response, 'ComflyVideo');
     }
 
     function pollComflyVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
@@ -4132,7 +4140,7 @@
             replaceWithVideoError(genId, '查询状态失败: HTTP ' + response.status, '', prompt);
             return;
           }
-          const data = await response.json();
+          const data = await safeJson(response, 'ComflyVideoPoll');
           // comfly: status=IN_PROGRESS/SUCCESS/FAILED, progress="0%", video in data.output
           const status = (data.status || '').toLowerCase();
           const progress = parseInt(data.progress) || 0;
@@ -4211,7 +4219,7 @@
           err.hint = errHint;
           throw err;
         }
-        return await response.json();
+        return await safeJson(response, 'ComflyVideo');
       }
 
       // 无参考图：JSON
@@ -4238,7 +4246,7 @@
         err.hint = errHint;
         throw err;
       }
-      return await response.json();
+      return await safeJson(response, 'ComflyVideo');
     }
 
     async function pollScdVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
@@ -4266,7 +4274,7 @@
             replaceWithVideoError(genId, '查询状态失败: HTTP ' + response.status, '', prompt);
             return;
           }
-          const data = await response.json();
+          const data = await safeJson(response, 'ScdVideoPoll');
           console.log('[Scd666 Video Poll]', taskId, data.status, data.progress);
 
           updateVideoGeneratingProgress(genId, data.status, data.progress);
