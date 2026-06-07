@@ -2591,8 +2591,8 @@
         throw err;
       }
 
-      const submitData = await submitResp.json();
-      console.log('[Scd666 Image Submit]', JSON.stringify(submitData).slice(0, 300));
+      const submitData = await safeJson(submitResp, 'ScdImage');
+      console.log('[Scd666 Image Submit]', submitData.id, submitData.status);
       if (!submitData.id) {
         throw { message: '未收到任务 ID', hint: '' };
       }
@@ -2613,7 +2613,7 @@
 
         if (!pollResp.ok) continue;
 
-        const pollData = await pollResp.json();
+        const pollData = await safeJson(pollResp, 'ScdImagePoll');
         console.log('[Scd666 Image Poll]', taskId, pollData.status, pollData.progress);
 
         if (pollData.status === 'succeeded') {
@@ -4079,7 +4079,7 @@
 
     // ========== Comfly Video API ==========
     async function callComflyVideoAPI(prompt, refImages) {
-      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
       const apiKey = state.videoApiKey;
       const size = state.videoSize;
 
@@ -4116,7 +4116,7 @@
     }
 
     function pollComflyVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
-      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
       const apiKey = state.videoApiKey;
       let pollCount = 0;
       const maxPolls = 120;
