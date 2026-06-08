@@ -383,6 +383,10 @@
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
+    .generating-placeholder.video-generating-placeholder {
+      background: linear-gradient(135deg, #2a1a3a 0%, #1e1428 50%, #2a1a3a 100%);
+      background-size: 200% 200%;
+    }
     .generating-placeholder-label {
       position: absolute;
       top: 12px;
@@ -2553,7 +2557,7 @@
 
     // ========== Scd666 Image API (async: submit + poll) ==========
     async function callScdImageAPI(prompt, signal, refImages) {
-      const baseUrl = state.baseUrl.replace(/\/+$/, '');
+      const baseUrl = state.baseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
       const apiKey = state.apiKey;
 
       const body = {
@@ -2616,13 +2620,12 @@
         const pollData = await safeJson(pollResp, 'ScdImagePoll');
         console.log('[Scd666 Image Poll]', taskId, pollData.status, pollData.progress);
 
-        if (pollData.status === 'succeeded') {
-          const results = pollData.results || [];
-          if (results.length > 0 && results[0].url) {
-            return results[0].url;
-          }
+        if (pollData.status === 'completed') {
+          // 图片URL可能在 video_url / url / results[0].url
+          const imgUrl = pollData.video_url || pollData.url || (pollData.results && pollData.results[0] && pollData.results[0].url);
+          if (imgUrl) return imgUrl;
           throw { message: '生成成功但未返回图片', hint: '' };
-        } else if (pollData.status === 'failed' || pollData.status === 'violation') {
+        } else if (pollData.status === 'failed') {
           const errMsg = pollData.error || '生成失败';
           throw { message: errMsg, hint: '' };
         }
@@ -4170,7 +4173,7 @@
 
     // ========== Scd666 Video API (existing) ==========
     async function callScdVideoAPI(prompt, refImages) {
-      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
       const apiKey = state.videoApiKey;
       const size = state.videoSize;
 
@@ -4250,7 +4253,7 @@
     }
 
     async function pollScdVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
-      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
       const apiKey = state.videoApiKey;
       let pollCount = 0;
       const maxPolls = 120; // Max 10 min (at 5s intervals)
@@ -4322,26 +4325,23 @@
         <div class="message-inner">
           <div class="assistant-avatar">✦</div>
           <div class="assistant-content">
-            <div class="video-generating" id="video-gen-card-${id}">
-              <div class="video-generating-header">
+            <div class="generating-result generating-result-single">
+              <div class="generating-result-header">
                 <span class="prompt-text">${escapeHtml(prompt)}</span>
-                <div class="meta-tags" style="flex-wrap:wrap;gap:4px;">
-                  <span class="meta-tag">${getCurrentModelName()} · ${state.videoSize.replace('x','×')}</span>
-                  ${refBadges}
+                <span class="meta-tag">${getCurrentModelName()} · ${state.videoSize.replace('x','×')}</span>
+                ${refBadges}
+              </div>
+              <div class="generating-placeholder video-generating-placeholder" id="gen-placeholder-${id}">
+                <div class="generating-placeholder-label">
+                  <span class="dot" style="background:var(--accent-purple);"></span>
+                  <span id="video-gen-status-${id}">排队中...</span>
+                  <span style="margin-left:8px;font-size:11px;opacity:0.7;" id="video-gen-progress-${id}">0%</span>
                 </div>
               </div>
-              <div class="video-progress-bar">
-                <div class="video-progress-fill" id="video-progress-fill-${id}"></div>
-              </div>
-              <div class="video-generating-status">
-                <span class="dot" style="background:var(--accent-green);"></span>
-                <span id="video-gen-status-${id}">排队中...</span>
-              </div>
-              <div class="video-progress-text" id="video-gen-progress-${id}">0%</div>
-              <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
-                <span class="timer" id="gen-timer-${id}" style="font-size:12px;color:var(--text-tertiary);margin-right:auto;">0s</span>
+              <div class="generating-placeholder-footer">
+                <span class="timer" id="gen-timer-${id}" style="color:var(--accent-purple);">0s</span>
                 <button class="generating-cancel-link" onclick="cancelVideoGeneration('${id}')">取消生成</button>
-                <button class="generating-cancel-link" onclick="deleteMessage(${id}, event)" style="color:var(--text-tertiary);">删除</button>
+                <button class="generating-cancel-link" onclick="deleteMessage(${id}, event)" style="margin-left:8px;color:var(--text-tertiary);">删除</button>
               </div>
             </div>
           </div>
@@ -4382,7 +4382,6 @@
         smartScrollToBottom();
       }, 1000);
 
-      // Register timer for cleanup
       if (!state._videoTimers) state._videoTimers = {};
       state._videoTimers[id] = timerInterval;
 
@@ -4390,9 +4389,6 @@
     }
 
     function updateVideoGeneratingProgress(genId, status, progress) {
-      const fillEl = document.getElementById('video-progress-fill-' + genId);
-      if (fillEl) fillEl.style.width = (progress || 0) + '%';
-
       const textEl = document.getElementById('video-gen-progress-' + genId);
       if (textEl) textEl.textContent = (progress || 0) + '%';
 
