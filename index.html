@@ -1442,6 +1442,16 @@
                 </div>
               </div>
             </div>
+            <div class="count-dropdown-wrap" style="position:relative;display:none;" id="videoRatioDropdownWrap">
+              <button class="toolbar-pill" onclick="toggleVideoRatioDropdown(event)" title="视频比例">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+                <span id="currentVideoRatioLabel">16:9</span>
+              </button>
+              <div class="count-dropdown" id="videoRatioDropdown">
+                <div class="count-option selected" onclick="selectVideoRatio('16:9')">16:9 横屏</div>
+                <div class="count-option" onclick="selectVideoRatio('9:16')">9:16 竖屏</div>
+              </div>
+            </div>
             <div class="count-dropdown-wrap" style="position:relative;" id="sizeDropdownWrap">
               <button class="toolbar-pill" onclick="toggleSizeDropdown(event)" title="尺寸">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -2386,6 +2396,18 @@
       const genId = addVideoGeneratingMessage(prompt, currentRefImages);
       const targetConvId = state.activeConvId;
 
+      // Register in activeGenerations for conversation switch recovery
+      if (!state.activeGenerations) state.activeGenerations = [];
+      const videoGen = {
+        convId: targetConvId,
+        genId: genId,
+        prompt: prompt,
+        startTime: Date.now(),
+        refImages: currentRefImages,
+        isVideo: true,
+      };
+      state.activeGenerations.push(videoGen);
+
       try {
         const result = await callVideoAPI(prompt, currentRefImages);
         console.log('[Video API] Submitted:', result);
@@ -2882,6 +2904,14 @@
             gen.timerInterval = null;
           }
         });
+        // 暂停视频定时器
+        const videoGens = state.activeGenerations.filter(g => g.isVideo && g.convId !== convId);
+        videoGens.forEach(gen => {
+          if (state._videoTimers && state._videoTimers[gen.genId]) {
+            clearInterval(state._videoTimers[gen.genId]);
+            delete state._videoTimers[gen.genId];
+          }
+        });
       }
 
       saveCurrentConversation();
@@ -2951,15 +2981,62 @@
           div.innerHTML = renderVideoCard(msg.id, msg.videoUrl || '', msg.content || '', msg.videoSize || '', refSrcs, msg.createdAt);
           container.appendChild(div);
         } else if (msg.type === 'generating') {
-          // 生成中的消息：如果在活跃生成列表中找到匹配，恢复 UI；否则是残留状态，移除
+          // 生成中的消息：检查活跃生成列表（图像或视频）
           const isActive = state.activeGenerations && state.activeGenerations.some(g => g.convId === convId && g.genId === msg.id);
           if (!isActive) {
             conv.messages = conv.messages.filter(m => m.id !== msg.id);
             return;
           }
-          // 找到对应的活跃生成
           const gen = state.activeGenerations.find(g => g.convId === convId && g.genId === msg.id);
-          // 恢复生成中 UI（含已完成图片和待生成占位）
+
+          // 视频生成中：恢复紫色shimmer占位
+          if (gen && gen.isVideo) {
+            const div = document.createElement('div');
+            div.className = 'message message-assistant';
+            div.id = 'msg-' + msg.id;
+            const elapsed = Math.floor((Date.now() - gen.startTime) / 1000);
+            const refBadges = (gen.refImages && gen.refImages.length > 0)
+              ? gen.refImages.map((src, idx) => `<span class="generating-ref-badge" onclick="openLightboxFromEl(this)"><img src="${escapeHtml(src)}">参考图 ${gen.refImages.length > 1 ? (idx+1) : ''}</span>`).join('')
+              : '';
+            div.innerHTML = `
+              <div class="message-inner">
+                <div class="assistant-avatar">✦</div>
+                <div class="assistant-content">
+                  <div class="generating-result generating-result-single">
+                    <div class="generating-result-header">
+                      <span class="prompt-text">${escapeHtml(gen.prompt)}</span>
+                      <span class="meta-tag">${getCurrentModelName()} · ${state.videoSize.replace('x','×')}</span>
+                      ${refBadges}
+                    </div>
+                    <div class="generating-placeholder video-generating-placeholder" id="gen-placeholder-${gen.genId}">
+                      <div class="generating-placeholder-label">
+                        <span class="dot" style="background:var(--accent-purple);"></span>
+                        <span id="video-gen-status-${gen.genId}">生成中...</span>
+                        <span style="margin-left:8px;font-size:11px;opacity:0.7;" id="video-gen-progress-${gen.genId}">0%</span>
+                      </div>
+                    </div>
+                    <div class="generating-placeholder-footer">
+                      <span class="timer" id="gen-timer-${gen.genId}" style="color:var(--accent-purple);">${elapsed}s</span>
+                      <button class="generating-cancel-link" onclick="cancelVideoGeneration('${gen.genId}')">取消生成</button>
+                      <button class="generating-cancel-link" onclick="deleteMessage(${gen.genId}, event)" style="margin-left:8px;color:var(--text-tertiary);">删除</button>
+                    </div>
+                  </div>
+                </div>
+              </div>`;
+            container.appendChild(div);
+            // 重启定时器
+            const timerStart = Date.now();
+            const timerInterval = setInterval(() => {
+              const el = document.getElementById('gen-timer-' + gen.genId);
+              if (el) el.textContent = Math.floor((Date.now() - timerStart) / 1000) + 's';
+              smartScrollToBottom();
+            }, 1000);
+            if (!state._videoTimers) state._videoTimers = {};
+            state._videoTimers[gen.genId] = timerInterval;
+            return;
+          }
+
+          // 图像生成中：恢复原逻辑
           const div = document.createElement('div');
           div.className = 'message message-assistant';
           div.id = 'msg-' + msg.id;
@@ -3536,6 +3613,26 @@
       document.getElementById('qualityDropdown').classList.remove('open');
       updateQualityPrice();
       syncLegacyToPresets();
+    }
+
+    // ========== Video Ratio Dropdown ==========
+    function toggleVideoRatioDropdown(event) {
+      event.stopPropagation();
+      const dd = document.getElementById('videoRatioDropdown');
+      const isOpen = dd.classList.contains('open');
+      closeAllDropdowns();
+      if (!isOpen) openDropdown(dd, event.currentTarget);
+    }
+
+    function selectVideoRatio(ratio) {
+      state.videoSize = ratio === '9:16' ? '720x1280' : '1280x720';
+      document.getElementById('currentVideoRatioLabel').textContent = ratio;
+      document.getElementById('videoRatioDropdown').classList.remove('open');
+      // 同步到预设
+      const preset = getCurrentVideoPreset();
+      if (preset) preset.size = state.videoSize;
+      saveVideoPresets();
+      updateVideoSizeUI();
     }
     function selectCount(el) {
       document.querySelectorAll('#countGrid .size-option').forEach(o => o.classList.remove('selected'));
@@ -4116,15 +4213,17 @@
       const refLabel = document.getElementById('refLabel');
       if (refLabel) refLabel.textContent = isVideo ? '参考图(最多7张)' : '参考图(最多4张)';
 
-      // 工具栏：图像模式专用按钮
+      // 工具栏：图像/视频模式专用按钮
       document.getElementById('sizeDropdownWrap').style.display = isVideo ? 'none' : '';
       document.getElementById('qualityDropdownWrap').style.display = isVideo ? 'none' : '';
       document.getElementById('countDropdownWrap').style.display = isVideo ? 'none' : '';
+      document.getElementById('videoRatioDropdownWrap').style.display = isVideo ? '' : 'none';
 
-      // 更新尺寸标签
+      // 更新尺寸
       if (isVideo) {
-        try { updateSizeDisplay(state.videoSize); } catch(e) {}
-        // 更新视频设置面板尺寸选中状态
+        const videoRatio = state.videoSize.startsWith('720') ? '9:16' : '16:9';
+        const rEl = document.getElementById('currentVideoRatioLabel');
+        if (rEl) rEl.textContent = videoRatio;
         document.querySelectorAll('#videoSizeGrid .size-option').forEach(opt => {
           opt.classList.toggle('selected', opt.dataset.size === state.videoSize);
         });
@@ -4546,6 +4645,10 @@
 
     // ========== Replace Video Generating with Result ==========
     function replaceWithVideo(genId, videoUrl, prompt, size, refImageSrcs, targetConvId, apiData) {
+      // 从活跃生成列表移除
+      if (state.activeGenerations) {
+        state.activeGenerations = state.activeGenerations.filter(g => g.genId !== genId);
+      }
       const div = document.getElementById('msg-' + genId);
       const isVisible = state.activeConvId === targetConvId;
 
@@ -4582,6 +4685,10 @@
     }
 
     function replaceWithVideoError(genId, errMsg, errHint, prompt) {
+      // 从活跃生成列表移除
+      if (state.activeGenerations) {
+        state.activeGenerations = state.activeGenerations.filter(g => g.genId !== genId);
+      }
       const div = document.getElementById('msg-' + genId);
       if (!div) return;
 
@@ -4699,6 +4806,10 @@
       if (state._videoTimers && state._videoTimers[genId]) {
         clearInterval(state._videoTimers[genId]);
         delete state._videoTimers[genId];
+      }
+      // Remove from activeGenerations
+      if (state.activeGenerations) {
+        state.activeGenerations = state.activeGenerations.filter(g => g.genId !== genId);
       }
       const div = document.getElementById('msg-' + genId);
       if (div) div.remove();
