@@ -2210,17 +2210,34 @@
       const stateMsg = state.messages.find(m => m.id === genId);
       if (convMsg) { convMsg.type = 'error'; conv.updatedAt = Date.now(); }
       if (stateMsg && convMsg) { stateMsg.type = 'error'; }
+      const count = stateMsg?.count || 1;
 
       if (div && isVisible) {
         div.innerHTML = `
           <div class="message-inner">
             <div class="assistant-avatar">✦</div>
             <div class="assistant-content">
-              <div class="error-result">
-                <div class="error-result-title">⚠️ 生成失败</div>
-                <div class="error-result-msg">${escapeHtml(errMsg)}</div>
-                ${errHint ? '<div class="error-result-hint">' + escapeHtml(errHint) + '</div>' : ''}
-                <button class="error-result-retry" data-msg-id="${genId}" data-prompt="${escapeHtml(prompt).replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔄 重试</button>
+              <div class="generating-result generating-result-single">
+                <div class="generating-result-header">
+                  <span class="prompt-text">${escapeHtml(prompt)}</span>
+                  <span class="meta-tag">${getCurrentModelName()} · ${(state.imageRatio||'9:16')} · ${state.imageKLevel||'1K'} · ${count}张</span>
+                </div>
+                <div class="generating-placeholder" style="animation:none;background:rgba(239,68,68,0.06);">
+                  <div class="generating-placeholder-label" style="background:rgba(239,68,68,0.15);">
+                    <span class="dot" style="background:var(--danger);animation:none;"></span>
+                    <span>⚠️ 生成失败</span>
+                  </div>
+                  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;width:85%;">
+                    <div style="color:var(--danger);font-size:13px;line-height:1.5;word-break:break-word;">${escapeHtml(errMsg)}</div>
+                    ${errHint ? '<div style="color:var(--text-tertiary);font-size:11px;margin-top:4px;">' + escapeHtml(errHint) + '</div>' : ''}
+                  </div>
+                </div>
+                <div class="generating-placeholder-footer">
+                  <span class="timer" style="color:var(--danger);">失败</span>
+                  <button class="generating-cancel-link" style="color:var(--accent-green);" data-msg-id="${genId}" data-prompt="${escapeHtml(prompt).replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔄 重试</button>
+                  <button class="generating-cancel-link" style="color:var(--accent-purple);" data-msg-id="${genId}" data-prompt="${escapeHtml(prompt).replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔁 再次生成</button>
+                  <button class="generating-cancel-link" onclick="deleteMessage(${genId}, event)" style="margin-left:8px;color:var(--text-tertiary);">🗑 删除</button>
+                </div>
               </div>
             </div>
           </div>
@@ -2971,7 +2988,30 @@
           const div = document.createElement('div');
           div.className = 'message message-assistant';
           div.id = 'msg-' + msg.id;
-          div.innerHTML = `<div class="message-inner"><div class="assistant-avatar">✦</div><div class="assistant-content"><div class="error-result"><div class="error-result-title">⚠️ 生成失败</div><div class="error-result-msg">历史记录</div></div></div></div>`;
+          div.innerHTML = `
+            <div class="message-inner">
+              <div class="assistant-avatar">✦</div>
+              <div class="assistant-content">
+                <div class="generating-result generating-result-single">
+                  <div class="generating-result-header">
+                    <span class="prompt-text">${escapeHtml(msg.content || '')}</span>
+                    <span class="meta-tag">${msg.videoModel || getCurrentModelName()} · ${(msg.videoSize||state.size||'1024x1024').replace('x','×')}</span>
+                  </div>
+                  <div class="generating-placeholder${msg.videoModel ? ' video-generating-placeholder' : ''}" style="animation:none;background:rgba(239,68,68,0.06);">
+                    <div class="generating-placeholder-label" style="background:rgba(239,68,68,0.15);">
+                      <span class="dot" style="background:var(--danger);animation:none;"></span>
+                      <span>⚠️ 生成失败</span>
+                    </div>
+                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:var(--danger);font-size:13px;">历史记录</div>
+                  </div>
+                  <div class="generating-placeholder-footer">
+                    <span class="timer" style="color:var(--danger);">失败</span>
+                    <button class="generating-cancel-link" style="color:var(--accent-green);" data-msg-id="${msg.id}" data-prompt="${escapeHtml(msg.content||'').replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔄 重试</button>
+                    <button class="generating-cancel-link" onclick="deleteMessage(${msg.id}, event)" style="margin-left:8px;color:var(--text-tertiary);">🗑 删除</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
           container.appendChild(div);
         } else if (msg.type === 'video') {
           const div = document.createElement('div');
@@ -3024,15 +3064,6 @@
                 </div>
               </div>`;
             container.appendChild(div);
-            // 重启定时器
-            const timerStart = Date.now();
-            const timerInterval = setInterval(() => {
-              const el = document.getElementById('gen-timer-' + gen.genId);
-              if (el) el.textContent = Math.floor((Date.now() - timerStart) / 1000) + 's';
-              smartScrollToBottom();
-            }, 1000);
-            if (!state._videoTimers) state._videoTimers = {};
-            state._videoTimers[gen.genId] = timerInterval;
             return;
           }
 
@@ -3126,12 +3157,23 @@
       // 如果切换到有生成中的对话，重连该对话的定时器
       if (state.activeGenerations && state.activeGenerations.length > 0) {
         state.activeGenerations.forEach(gen => {
-          if (gen.convId === convId && !gen.timerInterval) {
-            gen.timerInterval = setInterval(() => {
-              const el = document.getElementById('gen-timer-' + gen.genId);
-              if (el) el.textContent = Math.floor((Date.now() - gen.startTime) / 1000) + 's';
-              smartScrollToBottom();
-            }, 1000);
+          if (gen.convId === convId) {
+            if (gen.isVideo && !state._videoTimers) state._videoTimers = {};
+            if (gen.isVideo && !state._videoTimers[gen.genId]) {
+              const elapsed = Math.floor((Date.now() - gen.startTime) / 1000);
+              const timerRestart = Date.now();
+              state._videoTimers[gen.genId] = setInterval(() => {
+                const el = document.getElementById('gen-timer-' + gen.genId);
+                if (el) el.textContent = (elapsed + Math.floor((Date.now() - timerRestart) / 1000)) + 's';
+                smartScrollToBottom();
+              }, 1000);
+            } else if (!gen.isVideo && !gen.timerInterval) {
+              gen.timerInterval = setInterval(() => {
+                const el = document.getElementById('gen-timer-' + gen.genId);
+                if (el) el.textContent = Math.floor((Date.now() - gen.startTime) / 1000) + 's';
+                smartScrollToBottom();
+              }, 1000);
+            }
           }
         });
       }
@@ -4706,11 +4748,26 @@
         <div class="message-inner">
           <div class="assistant-avatar">✦</div>
           <div class="assistant-content">
-            <div class="error-result">
-              <div class="error-result-title">⚠️ 视频生成失败</div>
-              <div class="error-result-msg">${escapeHtml(errMsg)}</div>
-              ${errHint ? '<div class="error-result-hint">' + escapeHtml(errHint) + '</div>' : ''}
-              <button class="error-result-retry" data-msg-id="${genId}" data-prompt="${escapeHtml(prompt).replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔄 重试</button>
+            <div class="generating-result generating-result-single">
+              <div class="generating-result-header">
+                <span class="prompt-text">${escapeHtml(prompt)}</span>
+                <span class="meta-tag">${getCurrentModelName()} · ${state.videoSize.replace('x','×')}</span>
+              </div>
+              <div class="generating-placeholder video-generating-placeholder" style="animation:none;background:rgba(239,68,68,0.06);">
+                <div class="generating-placeholder-label" style="background:rgba(239,68,68,0.15);">
+                  <span class="dot" style="background:var(--danger);animation:none;"></span>
+                  <span>⚠️ 视频生成失败</span>
+                </div>
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;width:85%;">
+                  <div style="color:var(--danger);font-size:13px;line-height:1.5;word-break:break-word;">${escapeHtml(errMsg)}</div>
+                  ${errHint ? '<div style="color:var(--text-tertiary);font-size:11px;margin-top:4px;">' + escapeHtml(errHint) + '</div>' : ''}
+                </div>
+              </div>
+              <div class="generating-placeholder-footer">
+                <span class="timer" style="color:var(--danger);">失败</span>
+                <button class="generating-cancel-link" style="color:var(--accent-green);" data-msg-id="${genId}" data-prompt="${escapeHtml(prompt).replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔄 重试</button>
+                <button class="generating-cancel-link" onclick="deleteMessage(${genId}, event)" style="margin-left:8px;color:var(--text-tertiary);">🗑 删除</button>
+              </div>
             </div>
           </div>
         </div>`;
