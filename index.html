@@ -2234,8 +2234,7 @@
                 </div>
                 <div class="generating-placeholder-footer">
                   <span class="timer" style="color:var(--danger);">失败</span>
-                  <button class="generating-cancel-link" style="color:var(--accent-green);" data-msg-id="${genId}" data-prompt="${escapeHtml(prompt).replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔄 重试</button>
-                  <button class="generating-cancel-link" style="color:var(--accent-purple);" data-msg-id="${genId}" data-prompt="${escapeHtml(prompt).replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔁 再次生成</button>
+                  <button class="generating-cancel-link" style="color:var(--accent-green);" onclick="retryInPlace(${genId})">🔄 重试</button>
                   <button class="generating-cancel-link" onclick="deleteMessage(${genId}, event)" style="margin-left:8px;color:var(--text-tertiary);">🗑 删除</button>
                 </div>
               </div>
@@ -2723,64 +2722,277 @@
     }
 
     // ========== Retry ==========
-    function retryPrompt(prompt) {
-      document.getElementById('promptInput').value = prompt;
-      autoResize(document.getElementById('promptInput'));
-      sendMessage();
-    }
-    // ========== Retry with Reference Images ==========
-    function retryWithRefImages(prompt, refImageSrcs) {
-      document.getElementById('promptInput').value = prompt;
-      autoResize(document.getElementById('promptInput'));
-      // 恢复参考图（不直接写入 state.referenceImages，让 sendMessage 处理）
-      if (refImageSrcs && refImageSrcs.length > 0) {
-        state.referenceImages = [...refImageSrcs];
-        updateRefImagePreview();
-      }
-      sendMessage();
-    }
-    // ========== Retry from Card (with ref images) ==========
-    function retryFromCard(msgId, prompt) {
+    // ========== Retry in Place (error card → generating → result) ==========
+    async function retryInPlace(msgId) {
       const msg = state.messages.find(m => m.id === msgId);
-      const refSrcs = msg?.refImageSrcs || [];
+      if (!msg) return;
+      const prompt = msg.content || '';
+      if (!prompt) return;
+      const promptInput = document.getElementById('promptInput');
+      promptInput.value = prompt;
+      autoResize(promptInput);
 
-      // 如果是视频消息，切换到视频模式
-      if (msg && msg.type === 'video') {
+      // 如果是视频
+      if (msg.type === 'error' && msg.videoModel) {
         if (state.mode !== 'video') switchMode('video');
-        if (msg.videoSize) {
-          state.videoSize = msg.videoSize;
-          updateVideoSizeUI();
-        }
+        if (msg.videoSize) { state.videoSize = msg.videoSize; updateVideoSizeUI(); }
+        retryVideoInPlace(msgId, prompt);
+        return;
       }
 
-      // 恢复原始生成参数：数量、尺寸、画质
-      if (msg) {
-        if (msg.count && msg.type !== 'video') {
-          state.imageCount = msg.count;
-          document.getElementById('currentCountLabel').textContent = msg.count + '张';
-          document.querySelectorAll('.count-option').forEach(o => {
-            o.classList.toggle('selected', parseInt(o.dataset.count) === msg.count);
-          });
-        }
-        if (msg.size) {
-          state.size = msg.size;
-          try { updateSizeDisplay(msg.size); } catch(e) {}
-        }
-        if (msg.videoSize && msg.type === 'video') {
-          state.videoSize = msg.videoSize;
-          updateVideoSizeUI();
-        }
-        if (msg.quality) {
-          state.quality = msg.quality;
-          const ql = {low:'Low', medium:'Medium', high:'High', auto:'Auto'};
-          document.getElementById('currentQualityLabel').textContent = ql[msg.quality] || msg.quality;
-        }
+      // 恢复图像参数
+      if (msg.count) {
+        state.imageCount = msg.count;
+        document.getElementById('currentCountLabel').textContent = msg.count + '张';
+        document.querySelectorAll('.count-option').forEach(o => {
+          o.classList.toggle('selected', parseInt(o.dataset.count) === msg.count);
+        });
+      }
+      if (msg.size) { state.size = msg.size; try { updateSizeDisplay(msg.size); } catch(e) {} }
+      if (msg.quality) {
+        state.quality = msg.quality;
         updateQualityPrice();
       }
+
+      const refSrcs = msg.refImageSrcs || [];
       if (refSrcs.length > 0) {
-        retryWithRefImages(prompt, refSrcs);
-      } else {
-        retryPrompt(prompt);
+        state.referenceImages = [...refSrcs];
+        updateRefImagePreview();
+      }
+
+      const count = state.imageCount || 1;
+      const genId = msgId; // reuse same card
+      const targetConvId = state.activeConvId;
+      const currentRefImages = [...state.referenceImages];
+      state.referenceImages = [];
+      updateRefImagePreview();
+
+      // Convert error card back to generating shimmer
+      const div = document.getElementById('msg-' + genId);
+      if (div) {
+        msg.type = 'generating';
+        const conv = state.conversations.find(c => c.id === targetConvId);
+        const convMsg = conv?.messages?.find(m => m.id === genId);
+        if (convMsg) convMsg.type = 'generating';
+        // rebuild generating UI
+        const refBadges = currentRefImages.length > 0
+          ? currentRefImages.map((src, idx) => `<span class="generating-ref-badge" data-lightbox-src="${escapeHtml(src)}" onclick="openLightboxFromEl(this)"><img src="${escapeHtml(src)}">参考图 ${currentRefImages.length > 1 ? (idx+1) : ''}</span>`).join('')
+          : '';
+        if (count === 1) {
+          div.innerHTML = `
+            <div class="message-inner"><div class="assistant-avatar">✦</div><div class="assistant-content">
+              <div class="generating-result generating-result-single">
+                <div class="generating-result-header">
+                  <span class="prompt-text">${escapeHtml(prompt)}</span>
+                  <span class="meta-tag">${getCurrentModelName()} · ${(state.imageRatio||'9:16')} · ${state.imageKLevel||'1K'}</span>
+                  ${refBadges}
+                </div>
+                <div class="generating-placeholder" id="gen-placeholder-${genId}">
+                  <div class="generating-placeholder-label">
+                    <span class="dot"></span><span id="gen-status-${genId}">排队中...</span>
+                  </div>
+                </div>
+                <div class="generating-placeholder-footer">
+                  <span class="timer" id="gen-timer-${genId}">0s</span>
+                  <button class="generating-cancel-link" onclick="cancelGeneration(${genId})">取消生成</button>
+                  <button class="generating-cancel-link" onclick="deleteMessage(${genId}, event)" style="margin-left:8px;color:var(--text-tertiary);">删除</button>
+                </div>
+              </div>
+            </div></div>`;
+        } else {
+          let gridCells = '';
+          for (let i = 0; i < count; i++) {
+            gridCells += `<div class="generating-grid-cell" id="gen-cell-${genId}-${i}"><div class="cell-label" id="gen-cell-label-${genId}-${i}">等待中</div></div>`;
+          }
+          div.innerHTML = `
+            <div class="message-inner"><div class="assistant-avatar">✦</div><div class="assistant-content">
+              <div class="generating-result">
+                <div class="generating-result-header">
+                  <span class="prompt-text">${escapeHtml(prompt)}</span>
+                  <span class="meta-tag">${getCurrentModelName()} · ${(state.imageRatio||'9:16')} · ${state.imageKLevel||'1K'} · ${count}张</span>
+                  ${refBadges}
+                </div>
+                <div class="generating-grid" id="gen-grid-${genId}">${gridCells}</div>
+                <div class="generating-placeholder-footer">
+                  <span class="timer" id="gen-timer-${genId}">0s</span>
+                  <span id="gen-progress-${genId}">0/${count}</span>
+                  <button class="generating-cancel-link" onclick="cancelGeneration(${genId})">取消生成</button>
+                  <button class="generating-cancel-link" onclick="deleteMessage(${genId}, event)" style="margin-left:8px;color:var(--text-tertiary);">删除</button>
+                </div>
+              </div>
+            </div></div>`;
+        }
+      }
+
+      // Start timer
+      const timerStart = Date.now();
+      const abortController = new AbortController();
+      const timerInterval = setInterval(() => {
+        const el = document.getElementById('gen-timer-' + genId);
+        if (el) el.textContent = Math.floor((Date.now() - timerStart) / 1000) + 's';
+        smartScrollToBottom();
+      }, 1000);
+
+      const generation = {
+        convId: targetConvId, genId, prompt, count, startTime: Date.now(),
+        size: state.size, quality: state.quality, refImages: currentRefImages,
+        completedCells: [], errorCells: [], abortController, timerInterval,
+      };
+      if (!state.activeGenerations) state.activeGenerations = [];
+      state.activeGenerations.push(generation);
+      state.activeGeneration = generation;
+      state.generating = true;
+
+      try { localStorage.setItem('gpt_image2_pending_generation', JSON.stringify({ prompt, count, size: state.size, quality: state.quality, convId: targetConvId })); } catch(e) {}
+
+      const results = [];
+      const errors = [];
+      let completedCount = 0;
+
+      try {
+        if (count === 1) {
+          updatePlaceholderStatus(genId, '生成中...');
+          const src = await callImageAPI(prompt, abortController.signal, currentRefImages);
+          results.push({ src });
+          generation.completedCells.push({ index: 0, src });
+        } else {
+          const tasks = [];
+          for (let i = 0; i < count; i++) {
+            tasks.push((async () => {
+              if (i > 0) await sleep(2000);
+              try {
+                updateCellStatus(genId, i, '生成中...');
+                const src = await callImageAPI(prompt, abortController.signal, currentRefImages);
+                results.push({ src });
+                updateGeneratingCell(genId, i, src, prompt);
+                generation.completedCells.push({ index: i, src });
+                return { success: true, src, index: i };
+              } catch (err) {
+                if (err.name === 'AbortError') throw err;
+                updateCellError(genId, i, err.message || '生成失败');
+                errors.push({ index: i, message: err.message, hint: err.hint || '' });
+                generation.errorCells.push({ index: i, message: err.message || '生成失败' });
+                return { success: false, index: i };
+              } finally {
+                completedCount++;
+                updateProgress(genId, completedCount, count);
+              }
+            })());
+          }
+          await Promise.all(tasks);
+        }
+
+        if (results.length > 0) {
+          const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+          replaceWithImage(genId, results, prompt, state.size, state.quality, null, currentRefImages, errors, targetConvId);
+          if (errors.length > 0) {
+            showToast(`生成完成 ${results.length}/${count}，${errors.length}张失败，耗时 ${elapsed}s`, 'warning');
+          } else {
+            showToast(`生成 ${count} 张成功！耗时 ${elapsed}s`, 'success');
+          }
+        } else if (errors.length > 0) {
+          const firstErr = errors[0];
+          replaceWithError(genId, firstErr.message || '全部生成失败', firstErr.hint || '', prompt, targetConvId);
+          showToast('全部生成失败', 'error');
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          const div2 = document.getElementById('msg-' + genId);
+          if (div2 && state.activeConvId === targetConvId) div2.remove();
+          const conv2 = state.conversations.find(c => c.id === targetConvId);
+          if (conv2) conv2.messages = conv2.messages.filter(m => m.id !== genId);
+          if (state.activeConvId === targetConvId) checkEmpty();
+          showToast('已取消', 'warning');
+        } else {
+          replaceWithError(genId, error.message || '生成失败', error.hint || '', prompt, targetConvId);
+        }
+      } finally {
+        if (state.activeGenerations) {
+          state.activeGenerations = state.activeGenerations.filter(g => g.genId !== genId);
+        }
+        if (!state.activeGenerations || state.activeGenerations.length === 0) {
+          state.generating = false; state.activeGeneration = null; state.abortController = null;
+        } else {
+          state.activeGeneration = state.activeGenerations[state.activeGenerations.length - 1];
+          state.generating = true;
+        }
+        if (timerInterval) { clearInterval(timerInterval); }
+        clearAllReferenceImages(true);
+        if (!state.activeGenerations || state.activeGenerations.length === 0) {
+          try { localStorage.removeItem('gpt_image2_pending_generation'); } catch(e) {}
+        }
+      }
+    }
+
+    // ========== Retry Video in Place ==========
+    async function retryVideoInPlace(msgId, prompt) {
+      const genId = msgId;
+      const targetConvId = state.activeConvId;
+      const refSrcs = state.messages.find(m => m.id === msgId)?.refImageSrcs || [];
+      if (refSrcs.length > 0) { state.referenceImages = [...refSrcs]; updateRefImagePreview(); }
+      const currentRefImages = [...state.referenceImages];
+      state.referenceImages = [];
+      updateRefImagePreview();
+
+      // Convert error card back to video generating shimmer
+      const div = document.getElementById('msg-' + genId);
+      if (div) {
+        const msg2 = state.messages.find(m => m.id === msgId);
+        if (msg2) msg2.type = 'generating';
+        const conv = state.conversations.find(c => c.id === targetConvId);
+        const convMsg = conv?.messages?.find(m => m.id === genId);
+        if (convMsg) convMsg.type = 'generating';
+        const refBadges = currentRefImages.length > 0
+          ? currentRefImages.map((src, idx) => `<span class="generating-ref-badge" onclick="openLightboxFromEl(this)"><img src="${escapeHtml(src)}">参考图 ${currentRefImages.length > 1 ? (idx+1) : ''}</span>`).join('')
+          : '';
+        div.innerHTML = `
+          <div class="message-inner"><div class="assistant-avatar">✦</div><div class="assistant-content">
+            <div class="generating-result generating-result-single">
+              <div class="generating-result-header">
+                <span class="prompt-text">${escapeHtml(prompt)}</span>
+                <span class="meta-tag">${getCurrentModelName()} · ${state.videoSize.replace('x','×')}</span>
+                ${refBadges}
+              </div>
+              <div class="generating-placeholder video-generating-placeholder" id="gen-placeholder-${genId}">
+                <div class="generating-placeholder-label">
+                  <span class="dot" style="background:var(--accent-purple);"></span>
+                  <span id="video-gen-status-${genId}">排队中...</span>
+                  <span style="margin-left:8px;font-size:11px;opacity:0.7;" id="video-gen-progress-${genId}">0%</span>
+                </div>
+              </div>
+              <div class="generating-placeholder-footer">
+                <span class="timer" id="gen-timer-${genId}" style="color:var(--accent-purple);">0s</span>
+                <button class="generating-cancel-link" onclick="cancelVideoGeneration('${genId}')">取消生成</button>
+                <button class="generating-cancel-link" onclick="deleteMessage(${genId}, event)" style="margin-left:8px;color:var(--text-tertiary);">删除</button>
+              </div>
+            </div>
+          </div></div>`;
+      }
+
+      const timerStart = Date.now();
+      const timerInterval = setInterval(() => {
+        const el = document.getElementById('gen-timer-' + genId);
+        if (el) el.textContent = Math.floor((Date.now() - timerStart) / 1000) + 's';
+        smartScrollToBottom();
+      }, 1000);
+      if (!state._videoTimers) state._videoTimers = {};
+      state._videoTimers[genId] = timerInterval;
+
+      const videoGen = { convId: targetConvId, genId, prompt, startTime: Date.now(), refImages: currentRefImages, isVideo: true };
+      if (!state.activeGenerations) state.activeGenerations = [];
+      state.activeGenerations.push(videoGen);
+
+      try {
+        const result = await callVideoAPI(prompt, currentRefImages);
+        const taskId = result.id || result.task_id;
+        const msg3 = state.messages.find(m => m.id === genId);
+        if (msg3) msg3.videoTaskId = taskId;
+        updateVideoGeneratingProgress(genId, result.status, result.progress || 0);
+        try { localStorage.setItem('gpt_image2_pending_video', JSON.stringify({ prompt, taskId, videoSize: state.videoSize, convId: targetConvId })); } catch(e) {}
+        pollVideoStatus(taskId, genId, targetConvId, prompt, currentRefImages);
+      } catch (error) {
+        replaceWithVideoError(genId, error.message || '视频生成失败', error.hint || '', prompt);
+        showToast(error.message || '视频生成失败', 'error');
       }
     }
 
@@ -3006,7 +3218,7 @@
                   </div>
                   <div class="generating-placeholder-footer">
                     <span class="timer" style="color:var(--danger);">失败</span>
-                    <button class="generating-cancel-link" style="color:var(--accent-green);" data-msg-id="${msg.id}" data-prompt="${escapeHtml(msg.content||'').replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔄 重试</button>
+                    <button class="generating-cancel-link" style="color:var(--accent-green);" onclick="retryInPlace(${msg.id})">🔄 重试</button>
                     <button class="generating-cancel-link" onclick="deleteMessage(${msg.id}, event)" style="margin-left:8px;color:var(--text-tertiary);">🗑 删除</button>
                   </div>
                 </div>
@@ -4765,7 +4977,7 @@
               </div>
               <div class="generating-placeholder-footer">
                 <span class="timer" style="color:var(--danger);">失败</span>
-                <button class="generating-cancel-link" style="color:var(--accent-green);" data-msg-id="${genId}" data-prompt="${escapeHtml(prompt).replace(/"/g, '&quot;')}" onclick="retryFromCard(parseInt(this.dataset.msgId), this.dataset.prompt)">🔄 重试</button>
+                <button class="generating-cancel-link" style="color:var(--accent-green);" onclick="retryInPlace(${genId})">🔄 重试</button>
                 <button class="generating-cancel-link" onclick="deleteMessage(${genId}, event)" style="margin-left:8px;color:var(--text-tertiary);">🗑 删除</button>
               </div>
             </div>
