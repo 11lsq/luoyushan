@@ -3391,6 +3391,52 @@
       }
     }
 
+    // ========== Retry from Result Card (new generation, same params) ==========
+    function retryFromCard(msgId, prompt) {
+      const msg = state.messages.find(m => m.id === msgId);
+      const refSrcs = msg?.refImageSrcs || [];
+
+      // 如果是视频消息，切换到视频模式
+      if (msg && msg.type === 'video') {
+        if (state.mode !== 'video') switchMode('video');
+        if (msg.videoSize) {
+          state.videoSize = msg.videoSize;
+          updateVideoSizeUI();
+        }
+      }
+
+      // 恢复原始生成参数
+      if (msg) {
+        if (msg.count && msg.type !== 'video') {
+          state.imageCount = msg.count;
+          document.getElementById('currentCountLabel').textContent = msg.count + '张';
+          document.querySelectorAll('.count-option').forEach(o => {
+            o.classList.toggle('selected', parseInt(o.dataset.count) === msg.count);
+          });
+        }
+        if (msg.size) {
+          state.size = msg.size;
+          try { updateSizeDisplay(msg.size); } catch(e) {}
+        }
+        if (msg.videoSize && msg.type === 'video') {
+          state.videoSize = msg.videoSize;
+          updateVideoSizeUI();
+        }
+        if (msg.quality) {
+          state.quality = msg.quality;
+          updateQualityPrice();
+        }
+      }
+
+      document.getElementById('promptInput').value = prompt;
+      autoResize(document.getElementById('promptInput'));
+      if (refSrcs.length > 0) {
+        state.referenceImages = [...refSrcs];
+        updateRefImagePreview();
+      }
+      sendMessage();
+    }
+
     // ========== Render Image Card HTML (Jimeng Style, multi-image) ==========
     function renderImageCard(msgId, images, prompt, size, quality, usage, refImageSrcs, createdAt, errors) {
       const safePrompt = escapeHtml(prompt).replace(/'/g, "\\'");
