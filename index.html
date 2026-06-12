@@ -2724,9 +2724,9 @@
     // ========== Retry ==========
     // ========== Retry in Place (error card → generating → result) ==========
     async function retryInPlace(msgId) {
-      const msg = state.messages.find(m => m.id === msgId);
+      const msg = state.messages.find(m => m.id === msgId || m.id === parseInt(msgId));
       if (!msg) return;
-      const prompt = msg.content || '';
+      const prompt = msg.prompt || msg.content || '';
       if (!prompt) return;
       const promptInput = document.getElementById('promptInput');
       promptInput.value = prompt;
