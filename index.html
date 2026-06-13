@@ -2609,20 +2609,67 @@
       const baseUrl = state.baseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
       const apiKey = state.apiKey;
 
+      // 有参考图时用 multipart/form-data（scd666 不支持 JSON body 传参考图 URL）
+      if (refImages && refImages.length > 0) {
+        const formData = new FormData();
+        formData.append('model', getCurrentModelName());
+        formData.append('prompt', prompt);
+        formData.append('replyType', 'async');
+        if (state.size) formData.append('aspectRatio', state.size);
+
+        for (const src of refImages) {
+          try {
+            let blob;
+            if (src.startsWith('data:')) {
+              const parts = src.split(',');
+              const mime = src.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
+              const binaryStr = atob(parts[1]);
+              const bytes = new Uint8Array(binaryStr.length);
+              for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+              blob = new Blob([bytes], { type: mime });
+            } else {
+              const resp = await fetch(src);
+              if (!resp.ok) continue;
+              blob = await resp.blob();
+            }
+            formData.append('input_reference[]', blob, 'ref.jpg');
+          } catch(e) {
+            console.error('ScdImage ref fetch error:', e);
+          }
+        }
+
+        const submitResp = await fetch(baseUrl + '/v1/videos', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + apiKey },
+          body: formData,
+          signal: signal,
+        });
+
+        if (!submitResp.ok) {
+          let errMsg = 'HTTP ' + submitResp.status;
+          let errHint = '';
+          try { const d = await submitResp.json(); errMsg = d.error || d.message || errMsg; } catch(e) {}
+          if (submitResp.status === 401) errHint = '请检查 API Key';
+          else if (submitResp.status === 429) errHint = '请求过于频繁，请稍后重试';
+          const err = new Error(errMsg);
+          err.hint = errHint;
+          throw err;
+        }
+
+        const submitData = await safeJson(submitResp, 'ScdImage');
+        console.log('[Scd666 Image Submit]', submitData.id, submitData.status);
+        if (!submitData.id) throw { message: '未收到任务 ID', hint: '' };
+        return await pollScdImageTask(baseUrl, apiKey, submitData.id, signal);
+      }
+
+      // 无参考图：JSON body
       const body = {
         model: getCurrentModelName(),
         prompt: prompt,
         replyType: 'async',
       };
-
-      // scd666 images use aspectRatio not size
       if (state.size) body.aspectRatio = state.size;
 
-      if (refImages && refImages.length > 0) {
-        body.images = refImages;
-      }
-
-      // Submit the async task
       const submitResp = await fetch(baseUrl + '/v1/videos', {
         method: 'POST',
         headers: {
@@ -2646,15 +2693,13 @@
 
       const submitData = await safeJson(submitResp, 'ScdImage');
       console.log('[Scd666 Image Submit]', submitData.id, submitData.status);
-      if (!submitData.id) {
-        throw { message: '未收到任务 ID', hint: '' };
-      }
+      if (!submitData.id) throw { message: '未收到任务 ID', hint: '' };
+      return await pollScdImageTask(baseUrl, apiKey, submitData.id, signal);
+    }
 
-      const taskId = submitData.id;
-
-      // Poll until complete
+    async function pollScdImageTask(baseUrl, apiKey, taskId, signal) {
       let attempts = 0;
-      const maxAttempts = 120; // ~10 min at 5s intervals
+      const maxAttempts = 120;
       while (attempts < maxAttempts) {
         if (signal && signal.aborted) throw new DOMException('Aborted', 'AbortError');
         await sleep(5000);
@@ -2663,22 +2708,18 @@
         const pollResp = await fetch(baseUrl + '/v1/videos/' + taskId, {
           headers: { 'Authorization': 'Bearer ' + apiKey },
         });
-
         if (!pollResp.ok) continue;
 
         const pollData = await safeJson(pollResp, 'ScdImagePoll');
         console.log('[Scd666 Image Poll]', taskId, pollData.status, pollData.progress);
 
         if (pollData.status === 'completed') {
-          // 图片URL可能在 video_url / url / results[0].url
           const imgUrl = pollData.video_url || pollData.url || (pollData.results && pollData.results[0] && pollData.results[0].url);
           if (imgUrl) return imgUrl;
           throw { message: '生成成功但未返回图片', hint: '' };
         } else if (pollData.status === 'failed') {
-          const errMsg = pollData.error || '生成失败';
-          throw { message: errMsg, hint: '' };
+          throw { message: pollData.error || '生成失败', hint: '' };
         }
-        // running → continue polling
       }
       throw { message: '图片生成超时', hint: '' };
     }
