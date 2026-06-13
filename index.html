@@ -2253,6 +2253,9 @@
       const prompt = input.value.trim();
       if (!prompt) return;
 
+      // 确保当前预设的参数已同步到 state
+      if (state.mode === 'image') syncPresetToLegacy();
+
       if (state.uploadingRefImages) {
         showToast('参考图上传中，请稍候...', 'warning');
         return;
@@ -2724,6 +2727,8 @@
     // ========== Retry ==========
     // ========== Retry in Place (error card → generating → result) ==========
     async function retryInPlace(msgId) {
+      // 确保当前预设参数已同步
+      syncPresetToLegacy();
       const msg = state.messages.find(m => m.id === msgId || m.id === parseInt(msgId));
       if (!msg) return;
       const prompt = msg.prompt || msg.content || '';
@@ -3393,6 +3398,8 @@
 
     // ========== Retry from Result Card (new generation, same params) ==========
     function retryFromCard(msgId, prompt) {
+      // 确保当前预设参数已同步
+      syncPresetToLegacy();
       const msg = state.messages.find(m => m.id === msgId);
       const refSrcs = msg?.refImageSrcs || [];
 
