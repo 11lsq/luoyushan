@@ -1040,6 +1040,14 @@
     .settings-tab.active { color: var(--accent-green); border-bottom-color: var(--accent-green); }
 
     /* ========== Preset Dropdown ========== */
+    .platform-tabs { display:flex; gap:0; margin-bottom:12px; border-bottom:1px solid var(--border-color); }
+    .platform-tab {
+      padding:8px 16px; border:none; background:none; cursor:pointer;
+      font-size:13px; color:var(--text-tertiary); border-bottom:2px solid transparent;
+      transition: all .2s; font-family: var(--font);
+    }
+    .platform-tab.active { color:var(--accent-green); border-bottom-color:var(--accent-green); }
+    .platform-tab:hover { color:var(--text-primary); }
     .preset-select-wrap {
       display: flex; align-items: center; gap: 8px;
     }
@@ -1501,6 +1509,10 @@
       <div id="settingsTabImage" class="settings-tab-content">
         <div class="setting-group">
           <div class="setting-group-title">模型预设</div>
+          <div class="platform-tabs" id="imagePlatformTabs">
+            <button class="platform-tab active" data-platform="comfly" onclick="selectImagePlatform('comfly')">Comfly</button>
+            <button class="platform-tab" data-platform="scd666" onclick="selectImagePlatform('scd666')">SCD666</button>
+          </div>
           <div class="setting-item">
             <div class="setting-label">选择预设</div>
             <div class="preset-select-wrap">
@@ -1621,6 +1633,10 @@
       <div id="settingsTabVideo" class="settings-tab-content" style="display:none;">
         <div class="setting-group">
           <div class="setting-group-title">模型预设</div>
+          <div class="platform-tabs" id="videoPlatformTabs">
+            <button class="platform-tab" data-platform="comfly" onclick="selectVideoPlatform('comfly')">Comfly</button>
+            <button class="platform-tab active" data-platform="scd666" onclick="selectVideoPlatform('scd666')">SCD666</button>
+          </div>
           <div class="setting-item">
             <div class="setting-label">选择预设</div>
             <div class="preset-select-wrap">
@@ -1779,8 +1795,10 @@
       // Preset system
       imagePresets: [],           // 图像模型预设列表
       selectedImagePresetId: '',  // 当前选中的图像预设ID
+      selectedImagePlatform: 'comfly', // 当前图像平台
       videoPresets: [],           // 视频模型预设列表
       selectedVideoPresetId: '',  // 当前选中的视频预设ID
+      selectedVideoPlatform: 'scd666', // 当前视频平台
       currentPresetType: 'image', // 当前预设面板类型
 
       // Legacy - kept for backward compat but synced from preset
@@ -2609,66 +2627,38 @@
       const baseUrl = state.baseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
       const apiKey = state.apiKey;
 
-      // 有参考图时用 multipart/form-data（scd666 不支持 JSON body 传参考图 URL）
-      if (refImages && refImages.length > 0) {
-        const formData = new FormData();
-        formData.append('model', getCurrentModelName());
-        formData.append('prompt', prompt);
-        formData.append('replyType', 'async');
-        if (state.size) formData.append('aspectRatio', state.size);
-
-        for (const src of refImages) {
-          try {
-            let blob;
-            if (src.startsWith('data:')) {
-              const parts = src.split(',');
-              const mime = src.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
-              const binaryStr = atob(parts[1]);
-              const bytes = new Uint8Array(binaryStr.length);
-              for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-              blob = new Blob([bytes], { type: mime });
-            } else {
-              const resp = await fetch(src);
-              if (!resp.ok) continue;
-              blob = await resp.blob();
-            }
-            formData.append('input_reference[]', blob, 'ref.jpg');
-          } catch(e) {
-            console.error('ScdImage ref fetch error:', e);
-          }
-        }
-
-        const submitResp = await fetch(baseUrl + '/v1/videos', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + apiKey },
-          body: formData,
-          signal: signal,
-        });
-
-        if (!submitResp.ok) {
-          let errMsg = 'HTTP ' + submitResp.status;
-          let errHint = '';
-          try { const d = await submitResp.json(); errMsg = d.error || d.message || errMsg; } catch(e) {}
-          if (submitResp.status === 401) errHint = '请检查 API Key';
-          else if (submitResp.status === 429) errHint = '请求过于频繁，请稍后重试';
-          const err = new Error(errMsg);
-          err.hint = errHint;
-          throw err;
-        }
-
-        const submitData = await safeJson(submitResp, 'ScdImage');
-        console.log('[Scd666 Image Submit]', submitData.id, submitData.status);
-        if (!submitData.id) throw { message: '未收到任务 ID', hint: '' };
-        return await pollScdImageTask(baseUrl, apiKey, submitData.id, signal);
-      }
-
-      // 无参考图：JSON body
       const body = {
         model: getCurrentModelName(),
         prompt: prompt,
         replyType: 'async',
       };
       if (state.size) body.aspectRatio = state.size;
+
+      // 有参考图时：fetch 转为 base64 data URL 放入 images 数组
+      if (refImages && refImages.length > 0) {
+        const imageDataUrls = [];
+        for (const src of refImages) {
+          try {
+            if (src.startsWith('data:')) {
+              imageDataUrls.push(src);
+            } else {
+              const resp = await fetch(src);
+              if (!resp.ok) continue;
+              const blob = await resp.blob();
+              const dataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+              imageDataUrls.push(dataUrl);
+            }
+          } catch(e) {
+            console.error('ScdImage ref fetch error:', e);
+          }
+        }
+        if (imageDataUrls.length > 0) body.images = imageDataUrls;
+      }
 
       const submitResp = await fetch(baseUrl + '/v1/videos', {
         method: 'POST',
@@ -4129,6 +4119,9 @@
       if (!state.selectedImagePresetId || !state.imagePresets.find(p => p.id === state.selectedImagePresetId)) {
         state.selectedImagePresetId = state.imagePresets[0].id;
       }
+      // 从当前预设推导平台
+      const curImgPreset = getCurrentImagePreset();
+      if (curImgPreset) state.selectedImagePlatform = detectPlatform(curImgPreset.apiUrl);
       // 从当前预设同步到legacy字段
       syncPresetToLegacy();
     }
@@ -4222,6 +4215,7 @@
 
       // 刷新预设下拉选项
       renderPresetDropdownOptions();
+      updateImagePlatformTabs();
     }
 
     // ========== Preset Dropdown ==========
@@ -4242,20 +4236,33 @@
 
     function renderPresetDropdownOptions() {
       const optionsEl = document.getElementById('imagePresetOptions');
-      optionsEl.innerHTML = state.imagePresets.map(p => 
+      const filtered = state.imagePresets.filter(p => detectPlatform(p.apiUrl) === state.selectedImagePlatform);
+      if (filtered.length === 0) {
+        optionsEl.innerHTML = '<div class="preset-dropdown-option" style="color:var(--text-tertiary);cursor:default;">该平台暂无预设</div>';
+        return;
+      }
+      optionsEl.innerHTML = filtered.map(p =>
         `<div class="preset-dropdown-option ${p.id === state.selectedImagePresetId ? 'active' : ''}" onclick="selectPreset('${p.id}')">${escapeHtml(p.name)}</div>`
       ).join('');
     }
 
     function renderVideoPresetDropdownOptions() {
       const optionsEl = document.getElementById('videoPresetOptions');
-      optionsEl.innerHTML = state.videoPresets.map(p => 
+      const filtered = state.videoPresets.filter(p => detectPlatform(p.apiUrl) === state.selectedVideoPlatform);
+      if (filtered.length === 0) {
+        optionsEl.innerHTML = '<div class="preset-dropdown-option" style="color:var(--text-tertiary);cursor:default;">该平台暂无预设</div>';
+        return;
+      }
+      optionsEl.innerHTML = filtered.map(p =>
         `<div class="preset-dropdown-option ${p.id === state.selectedVideoPresetId ? 'active' : ''}" onclick="selectVideoPreset('${p.id}')">${escapeHtml(p.name)}</div>`
       ).join('');
     }
 
     function selectPreset(presetId) {
       state.selectedImagePresetId = presetId;
+      const preset = getCurrentImagePreset();
+      if (preset) state.selectedImagePlatform = detectPlatform(preset.apiUrl);
+      updateImagePlatformTabs();
       syncPresetToLegacy();
       syncPresetToUI();
       document.querySelectorAll('.preset-dropdown-options').forEach(el => el.classList.remove('open'));
@@ -4263,8 +4270,52 @@
 
     function selectVideoPreset(presetId) {
       state.selectedVideoPresetId = presetId;
+      const preset = getCurrentVideoPreset();
+      if (preset) state.selectedVideoPlatform = detectPlatform(preset.apiUrl);
+      updateVideoPlatformTabs();
       syncVideoPresetToState();
+      saveVideoPresets();
       document.querySelectorAll('.preset-dropdown-options').forEach(el => el.classList.remove('open'));
+    }
+
+    // ========== Platform Tab Functions ==========
+    function selectImagePlatform(platform) {
+      state.selectedImagePlatform = platform;
+      updateImagePlatformTabs();
+      // Auto-select first preset of this platform
+      const firstPreset = state.imagePresets.find(p => detectPlatform(p.apiUrl) === platform);
+      if (firstPreset && firstPreset.id !== state.selectedImagePresetId) {
+        selectPreset(firstPreset.id);
+      } else {
+        renderPresetDropdownOptions();
+        const labelEl = document.getElementById('imagePresetLabel');
+        if (labelEl) labelEl.textContent = firstPreset ? firstPreset.name : '暂无预设';
+      }
+    }
+
+    function selectVideoPlatform(platform) {
+      state.selectedVideoPlatform = platform;
+      updateVideoPlatformTabs();
+      const firstPreset = state.videoPresets.find(p => detectPlatform(p.apiUrl) === platform);
+      if (firstPreset && firstPreset.id !== state.selectedVideoPresetId) {
+        selectVideoPreset(firstPreset.id);
+      } else {
+        renderVideoPresetDropdownOptions();
+        const labelEl = document.getElementById('videoPresetLabel');
+        if (labelEl) labelEl.textContent = firstPreset ? firstPreset.name : '暂无预设';
+      }
+    }
+
+    function updateImagePlatformTabs() {
+      document.querySelectorAll('#imagePlatformTabs .platform-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.platform === state.selectedImagePlatform);
+      });
+    }
+
+    function updateVideoPlatformTabs() {
+      document.querySelectorAll('#videoPlatformTabs .platform-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.platform === state.selectedVideoPlatform);
+      });
     }
 
     // Click outside to close preset dropdown
@@ -4307,15 +4358,26 @@
       const isVideo = _presetModalType === 'video';
       const presets = isVideo ? state.videoPresets : state.imagePresets;
       const selectedId = isVideo ? state.selectedVideoPresetId : state.selectedImagePresetId;
-      listEl.innerHTML = presets.map(p => `
-        <div class="preset-list-item ${p.id === selectedId ? 'active' : ''}" onclick="selectPresetInModal('${p.id}')">
-          <span class="preset-list-item-name">${escapeHtml(p.name)}</span>
-          <div class="preset-list-item-actions">
-            <button class="preset-list-item-btn" onclick="event.stopPropagation(); editPreset('${p.id}')" title="编辑">✏️</button>
-            ${presets.length > 1 ? `<button class="preset-list-item-btn danger" onclick="event.stopPropagation(); deletePreset('${p.id}')" title="删除">🗑️</button>` : ''}
-          </div>
-        </div>
-      `).join('') + `
+
+      // Group by platform
+      const comflyPresets = presets.filter(p => detectPlatform(p.apiUrl) === 'comfly');
+      const scdPresets = presets.filter(p => detectPlatform(p.apiUrl) === 'scd666');
+
+      function renderGroup(label, groupPresets) {
+        if (groupPresets.length === 0) return '';
+        return `<div class="preset-modal-group-label" style="font-size:11px;color:var(--text-tertiary);padding:8px 0 4px;text-transform:uppercase;letter-spacing:0.5px;">${label}</div>` +
+          groupPresets.map(p => `
+            <div class="preset-list-item ${p.id === selectedId ? 'active' : ''}" onclick="selectPresetInModal('${p.id}')">
+              <span class="preset-list-item-name">${escapeHtml(p.name)}</span>
+              <div class="preset-list-item-actions">
+                <button class="preset-list-item-btn" onclick="event.stopPropagation(); editPreset('${p.id}')" title="编辑">✏️</button>
+                ${presets.length > 1 ? `<button class="preset-list-item-btn danger" onclick="event.stopPropagation(); deletePreset('${p.id}')" title="删除">🗑️</button>` : ''}
+              </div>
+            </div>
+          `).join('');
+      }
+
+      listEl.innerHTML = renderGroup('Comfly', comflyPresets) + renderGroup('SCD666', scdPresets) + `
         <button class="preset-add-btn" onclick="addPreset()">+ 添加新预设</button>
       `;
     }
@@ -4393,8 +4455,13 @@
       document.getElementById('presetForm').classList.remove('open');
       _presetEditId = null;
       renderPresetModalList();
-      if (isVideo) { syncVideoPresetToState(); renderVideoPresetDropdownOptions(); }
-      else { syncPresetToUI(); renderPresetDropdownOptions(); }
+      if (isVideo) {
+        syncVideoPresetToState(); renderVideoPresetDropdownOptions();
+        updateVideoPlatformTabs();
+      } else {
+        syncPresetToUI(); renderPresetDropdownOptions();
+        updateImagePlatformTabs();
+      }
       showToast('预设已保存', 'success');
     }
 
@@ -4410,12 +4477,22 @@
         if (state.selectedVideoPresetId === id) {
           state.selectedVideoPresetId = state.videoPresets[0].id;
         }
+        // If current platform has no presets, switch to the other
+        const curPlatform = detectPlatform(getCurrentVideoPreset()?.apiUrl || '');
+        if (!state.videoPresets.some(p => detectPlatform(p.apiUrl) === state.selectedVideoPlatform)) {
+          state.selectedVideoPlatform = curPlatform;
+        }
         syncVideoPresetToState();
         saveVideoPresets();
       } else {
         state.imagePresets = state.imagePresets.filter(p => p.id !== id);
         if (state.selectedImagePresetId === id) {
           state.selectedImagePresetId = state.imagePresets[0].id;
+        }
+        // If current platform has no presets, switch to the other
+        const curPlatform = detectPlatform(getCurrentImagePreset()?.apiUrl || '');
+        if (!state.imagePresets.some(p => detectPlatform(p.apiUrl) === state.selectedImagePlatform)) {
+          state.selectedImagePlatform = curPlatform;
         }
         syncPresetToUI();
         savePresets();
@@ -4460,6 +4537,9 @@
       } catch(e) {
         state.selectedVideoPresetId = state.videoPresets[0].id;
       }
+      // 从当前预设推导平台
+      const curVidPreset = getCurrentVideoPreset();
+      if (curVidPreset) state.selectedVideoPlatform = detectPlatform(curVidPreset.apiUrl);
       syncVideoPresetToState();
     }
 
@@ -4486,6 +4566,8 @@
       if (urlEl) urlEl.value = state.videoBaseUrl;
       updateVideoApiKeyStatus();
       updateVideoSizeUI();
+      renderVideoPresetDropdownOptions();
+      updateVideoPlatformTabs();
     }
 
     // ========== Video API Key Management ==========
@@ -4710,57 +4792,102 @@
       return await safeJson(response, 'ComflyVideo');
     }
 
-    function pollComflyVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
+    async function pollComflyVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
       const baseUrl = state.videoBaseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
       const apiKey = state.videoApiKey;
-      let pollCount = 0;
-      const maxPolls = 120;
+      const startedAt = Date.now();
+      const maxDurationMs = 30 * 60 * 1000;   // 总超时 30 分钟
+      const pollInterval = 8000;               // 8 秒一次
+      const requestTimeoutMs = 20000;          // 单次请求 20s 超时
+      const maxConsecutiveErrors = 10;         // 连续失败上限
+      let consecutiveErrors = 0;
+      let stopped = false;
 
-      const intervalId = setInterval(async () => {
-        pollCount++;
-        if (pollCount > maxPolls) {
-          clearInterval(intervalId);
-          delete state.videoPollIntervals[taskId];
-          replaceWithVideoError(genId, '视频生成超时，请重试', '', prompt);
+      function cleanup() {
+        stopped = true;
+        const t = state.videoPollIntervals[taskId];
+        if (t) clearTimeout(t);
+        delete state.videoPollIntervals[taskId];
+      }
+      function removeFromActive() {
+        if (state.activeGenerations) {
+          state.activeGenerations = state.activeGenerations.filter(g => g.genId !== genId);
+        }
+        if (state._videoTimers && state._videoTimers[genId]) {
+          clearInterval(state._videoTimers[genId]);
+          delete state._videoTimers[genId];
+        }
+      }
+      function failWith(msg, hint) {
+        cleanup();
+        removeFromActive();
+        replaceWithVideoError(genId, msg, hint || '', prompt);
+      }
+
+      async function tick() {
+        if (stopped) return;
+        if (Date.now() - startedAt > maxDurationMs) {
+          console.warn('[Comfly Video Poll] 总超时(30min)', taskId);
+          failWith('视频生成超时（已等待 30 分钟），请重试', '');
           return;
         }
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
         try {
           const response = await fetch(baseUrl + '/v2/videos/generations/' + taskId, {
             headers: { 'Authorization': 'Bearer ' + apiKey },
+            signal: controller.signal,
           });
+          clearTimeout(timeoutId);
+
           if (!response.ok) {
-            clearInterval(intervalId);
-            delete state.videoPollIntervals[taskId];
-            replaceWithVideoError(genId, '查询状态失败: HTTP ' + response.status, '', prompt);
-            return;
-          }
-          const data = await safeJson(response, 'ComflyVideoPoll');
-          // comfly: status=IN_PROGRESS/SUCCESS/FAILED, progress="0%", video in data.output
-          const status = (data.status || '').toLowerCase();
-          const progress = parseInt(data.progress) || 0;
-          console.log('[Comfly Video Poll]', taskId, data.status, progress);
+            consecutiveErrors++;
+            console.warn('[Comfly Video Poll] HTTP', response.status, '连续失败=', consecutiveErrors);
+            if (consecutiveErrors >= maxConsecutiveErrors) {
+              failWith('查询状态连续 ' + maxConsecutiveErrors + ' 次失败: HTTP ' + response.status, '请检查 API Key / 地址');
+              return;
+            }
+          } else {
+            consecutiveErrors = 0;
+            const data = await safeJson(response, 'ComflyVideoPoll');
+            // comfly: status=IN_PROGRESS/SUCCESS/FAILED, progress="0%", video in data.output
+            const status = (data.status || '').toLowerCase();
+            const progress = parseInt(data.progress) || 0;
+            console.log('[Comfly Video Poll]', taskId, data.status, progress);
+            updateVideoGeneratingProgress(genId, status === 'success' ? 'completed' : status, progress);
 
-          updateVideoGeneratingProgress(genId, status === 'success' ? 'completed' : status, progress);
-
-          if (status === 'success') {
-            clearInterval(intervalId);
-            delete state.videoPollIntervals[taskId];
-            const videoUrl = (data.data && data.data.output) || data.video_url || '';
-            replaceWithVideo(genId, videoUrl, prompt, state.videoSize, refImageSrcs, targetConvId, data);
-          } else if (status === 'failed') {
-            clearInterval(intervalId);
-            delete state.videoPollIntervals[taskId];
-            const errMsg = data.fail_reason || data.error?.message || '视频生成失败';
-            replaceWithVideoError(genId, errMsg, '', prompt);
+            if (status === 'success') {
+              cleanup();
+              removeFromActive();
+              const videoUrl = (data.data && data.data.output) || data.video_url || '';
+              replaceWithVideo(genId, videoUrl, prompt, state.videoSize, refImageSrcs, targetConvId, data);
+              return;
+            } else if (status === 'failed') {
+              cleanup();
+              removeFromActive();
+              const errMsg = data.fail_reason || (data.error && data.error.message) || '视频生成失败';
+              replaceWithVideoError(genId, errMsg, '', prompt);
+              return;
+            }
           }
         } catch (err) {
-          console.error('Comfly poll error:', err);
+          clearTimeout(timeoutId);
+          consecutiveErrors++;
+          console.error('[Comfly Video Poll] error', err, '连续失败=', consecutiveErrors);
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            failWith('网络错误连续 ' + maxConsecutiveErrors + ' 次，已停止轮询', '请检查网络或 API 地址');
+            return;
+          }
         }
-      }, 5000);
 
-      state.videoPollIntervals[taskId] = intervalId;
-      return intervalId;
+        if (!stopped) {
+          state.videoPollIntervals[taskId] = setTimeout(tick, pollInterval);
+        }
+      }
+
+      state.videoPollIntervals[taskId] = -1;
+      tick();
     }
 
     // ========== Scd666 Video API (existing) ==========
@@ -4847,54 +4974,102 @@
     async function pollScdVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
       const baseUrl = state.videoBaseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
       const apiKey = state.videoApiKey;
-      let pollCount = 0;
-      const maxPolls = 120; // Max 10 min (at 5s intervals)
+      const startedAt = Date.now();
+      const maxDurationMs = 30 * 60 * 1000;   // 总超时 30 分钟（scd666 视频任务常达 15+ 分钟）
+      const pollInterval = 8000;               // 8 秒一次（长任务无需太频繁）
+      const requestTimeoutMs = 20000;          // 单次请求 20s 超时
+      const maxConsecutiveErrors = 10;         // 连续失败上限
+      let consecutiveErrors = 0;
+      let stopped = false;
 
-      const intervalId = setInterval(async () => {
-        pollCount++;
-        if (pollCount > maxPolls) {
-          clearInterval(intervalId);
-          delete state.videoPollIntervals[taskId];
-          replaceWithVideoError(genId, '视频生成超时，请重试', '', prompt);
+      function cleanup() {
+        stopped = true;
+        const t = state.videoPollIntervals[taskId];
+        if (t) clearTimeout(t);
+        delete state.videoPollIntervals[taskId];
+      }
+      function removeFromActive() {
+        if (state.activeGenerations) {
+          state.activeGenerations = state.activeGenerations.filter(g => g.genId !== genId);
+        }
+        if (state._videoTimers && state._videoTimers[genId]) {
+          clearInterval(state._videoTimers[genId]);
+          delete state._videoTimers[genId];
+        }
+      }
+      function failWith(msg, hint) {
+        cleanup();
+        removeFromActive(); // 先清理状态，即使 DOM 不存在也不会留"幽灵生成中"
+        replaceWithVideoError(genId, msg, hint || '', prompt);
+      }
+
+      async function tick() {
+        if (stopped) return;
+        if (Date.now() - startedAt > maxDurationMs) {
+          console.warn('[Scd666 Video Poll] 总超时(30min)', taskId);
+          failWith('视频生成超时（已等待 30 分钟），请重试', '');
           return;
         }
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
         try {
           const response = await fetch(baseUrl + '/v1/videos/' + taskId, {
             headers: { 'Authorization': 'Bearer ' + apiKey },
+            signal: controller.signal,
           });
+          clearTimeout(timeoutId);
+
           if (!response.ok) {
-            clearInterval(intervalId);
-            delete state.videoPollIntervals[taskId];
-            replaceWithVideoError(genId, '查询状态失败: HTTP ' + response.status, '', prompt);
+            consecutiveErrors++;
+            console.warn('[Scd666 Video Poll] HTTP', response.status, '连续失败=', consecutiveErrors);
+            if (consecutiveErrors >= maxConsecutiveErrors) {
+              failWith('查询状态连续 ' + maxConsecutiveErrors + ' 次失败: HTTP ' + response.status, '请检查 API Key / 地址');
+              return;
+            }
+            // 否则继续轮询
+          } else {
+            consecutiveErrors = 0; // 收到正常响应，重置计数
+            const data = await safeJson(response, 'ScdVideoPoll');
+            console.log('[Scd666 Video Poll]', taskId, data.status, data.progress);
+            updateVideoGeneratingProgress(genId, data.status, data.progress);
+
+            if (data.status === 'completed') {
+              cleanup();
+              removeFromActive();
+              // scd666 returns both id and task_id; use whichever is the video url key
+              const videoUrl = data.video_url || data.url || '';
+              replaceWithVideo(genId, videoUrl, prompt, data.size, refImageSrcs, targetConvId, data);
+              return;
+            } else if (data.status === 'failed') {
+              cleanup();
+              removeFromActive();
+              const errMsg = (data.error && data.error.message) || '视频生成失败';
+              replaceWithVideoError(genId, errMsg, '', prompt);
+              return;
+            }
+            // queued / processing → 继续轮询
+          }
+        } catch (err) {
+          clearTimeout(timeoutId);
+          consecutiveErrors++;
+          console.error('[Scd666 Video Poll] error', err, '连续失败=', consecutiveErrors);
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            failWith('网络错误连续 ' + maxConsecutiveErrors + ' 次，已停止轮询', '请检查网络或 API 地址');
             return;
           }
-          const data = await safeJson(response, 'ScdVideoPoll');
-          console.log('[Scd666 Video Poll]', taskId, data.status, data.progress);
-
-          updateVideoGeneratingProgress(genId, data.status, data.progress);
-
-          if (data.status === 'completed') {
-            clearInterval(intervalId);
-            delete state.videoPollIntervals[taskId];
-            // scd666 returns both id and task_id; use whichever is the video url key
-            const videoUrl = data.video_url || data.url || '';
-            replaceWithVideo(genId, videoUrl, prompt, data.size, refImageSrcs, targetConvId, data);
-          } else if (data.status === 'failed') {
-            clearInterval(intervalId);
-            delete state.videoPollIntervals[taskId];
-            const errMsg = data.error?.message || '视频生成失败';
-            replaceWithVideoError(genId, errMsg, '', prompt);
-          }
-          // queued / processing → continue polling
-        } catch (err) {
-          console.error('Poll error:', err);
-          // Don't stop on network error, keep polling
+          // 否则继续轮询
         }
-      }, 5000);
 
-      state.videoPollIntervals[taskId] = intervalId;
-      return intervalId;
+        // 递归调度下一次（避免 setInterval+async 并发竞态）
+        if (!stopped) {
+          state.videoPollIntervals[taskId] = setTimeout(tick, pollInterval);
+        }
+      }
+
+      // 立即开始第一次轮询
+      state.videoPollIntervals[taskId] = -1; // 占位，tick 内会更新为真实 timer
+      tick();
     }
 
     // ========== Video Generating Card ==========
