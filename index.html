@@ -1934,8 +1934,7 @@
             }
             if (gen.quality) {
               state.quality = gen.quality;
-              const l = {low:'Low', medium:'Medium', high:'High', auto:'Auto'};
-              document.getElementById('currentQualityLabel').textContent = l[gen.quality] || gen.quality;
+              // currentQualityLabel 是K级别标签,不要设为画质值
             }
             if (gen.count) {
               state.imageCount = gen.count;
@@ -1946,6 +1945,35 @@
           }
         }
       } catch(e) {}
+
+      // 视频任务刷新恢复：有 taskId 可继续轮询（不重新提交，不花 API 费用）
+      try {
+        const pendingVideo = localStorage.getItem('gpt_image2_pending_video');
+        if (pendingVideo) {
+          const pv = JSON.parse(pendingVideo);
+          localStorage.removeItem('gpt_image2_pending_video');
+          if (pv && pv.taskId && pv.convId && pv.prompt) {
+            const conv = state.conversations.find(c => c.id === pv.convId);
+            if (conv) {
+              if (pv.videoSize) state.videoSize = pv.videoSize;
+              state.mode = 'video';
+              applyModeUI();
+              switchConversation(pv.convId);
+              const refSrcs = [];
+              const genId = addVideoGeneratingMessage(pv.prompt, refSrcs);
+              if (!state.activeGenerations) state.activeGenerations = [];
+              state.activeGenerations.push({
+                convId: pv.convId, genId: genId, prompt: pv.prompt,
+                startTime: Date.now(), refImages: refSrcs, isVideo: true,
+              });
+              const vmsg = state.messages.find(m => m.id === genId);
+              if (vmsg) vmsg.videoTaskId = pv.taskId;
+              pollVideoStatus(pv.taskId, genId, pv.convId, pv.prompt, refSrcs);
+              showToast('正在恢复上次未完成的视频任务…', 'info');
+            }
+          }
+        }
+      } catch(e) { console.error('pending_video recover error', e); }
 
       document.getElementById('promptInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -3760,7 +3788,7 @@
       select.querySelector('.custom-select-options').classList.remove('open');
       select.querySelector('.custom-select-trigger').classList.remove('open');
       const value = option.dataset.value;
-      if (selectId === 'qualitySelect') { state.quality = value; document.getElementById('currentQualityLabel').textContent = trigger.textContent; updateQualityPrice(); }
+      if (selectId === 'qualitySelect') { state.quality = value; updateQualityPrice(); }
       else if (selectId === 'formatSelect') { state.format = value; document.getElementById('compressionGroup').style.display = (value === 'jpeg' || value === 'webp') ? 'block' : 'none'; }
       else if (selectId === 'moderationSelect') { state.moderation = value; }
       syncLegacyToPresets();
@@ -3979,9 +4007,8 @@
       document.getElementById('currentCountLabel').textContent = state.imageCount + '张';
     }
     function cycleQuality() {
-      const q = ['low','medium','high','auto'], l = {low:'Low',medium:'Medium',high:'High',auto:'Auto'};
+      const q = ['low','medium','high','auto'];
       state.quality = q[(q.indexOf(state.quality)+1)%q.length];
-      document.getElementById('currentQualityLabel').textContent = l[state.quality];
       const s = document.getElementById('qualitySelect');
       s.querySelectorAll('.custom-select-option').forEach(o => o.classList.toggle('selected', o.dataset.value === state.quality));
       s.querySelector('.custom-select-trigger span').textContent = l[state.quality];
@@ -4140,7 +4167,6 @@
       state.apiKey = preset.apiKey || '';
       state.baseUrl = preset.apiUrl || 'https://ai.comfly.chat/v1';
       state.size = preset.size || '1024x1024';
-      updateSizeDisplay(state.size);
       state.quality = preset.quality || 'high';
       state.format = preset.format || 'png';
       state.compression = preset.compression || 85;
@@ -4172,9 +4198,9 @@
       // 更新预设下拉标签
       document.getElementById('imagePresetLabel').textContent = preset.name;
 
-      // 更新尺寸选择 - 动态渲染尺寸网格
+      // 更新尺寸选择 - 先渲染网格，再同步 state.size 和工具栏显示
       renderSizeGrid(preset);
-      if (state.size !== preset.size) state.size = preset.size;
+      state.size = preset.size || '1024x1024';
       try { updateSizeDisplay(state.size); } catch(e) {}
 
       // 更新画质
@@ -4184,8 +4210,7 @@
       });
       const qTrigger = document.querySelector('#qualitySelect .custom-select-trigger span');
       if (qTrigger) qTrigger.textContent = qlMap[preset.quality] || 'High';
-      const currentQLabel = document.getElementById('currentQualityLabel');
-      if (currentQLabel) currentQLabel.textContent = qlMap[preset.quality] || 'High';
+      // 注意: currentQualityLabel 是工具栏的K级别标签(1K/2K),不要在这里设为画质值
       if (state.quality !== preset.quality) state.quality = preset.quality;
 
       // 更新格式
@@ -5168,6 +5193,8 @@
 
     // ========== Replace Video Generating with Result ==========
     function replaceWithVideo(genId, videoUrl, prompt, size, refImageSrcs, targetConvId, apiData) {
+      // 视频结束，清理刷新恢复意图
+      try { localStorage.removeItem('gpt_image2_pending_video'); } catch(e) {}
       // 从活跃生成列表移除
       if (state.activeGenerations) {
         state.activeGenerations = state.activeGenerations.filter(g => g.genId !== genId);
@@ -5208,6 +5235,8 @@
     }
 
     function replaceWithVideoError(genId, errMsg, errHint, prompt) {
+      // 视频结束，清理刷新恢复意图
+      try { localStorage.removeItem('gpt_image2_pending_video'); } catch(e) {}
       // 从活跃生成列表移除
       if (state.activeGenerations) {
         state.activeGenerations = state.activeGenerations.filter(g => g.genId !== genId);
