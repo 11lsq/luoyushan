@@ -1780,11 +1780,20 @@
 
     const DEFAULT_VIDEO_PRESETS = [
       {
+        id: 'vpreset-comfly',
+        name: 'omni_flash-10s',
+        apiKey: '',
+        apiUrl: 'https://ai.comfly.chat/v1',
+        size: '720x1280',
+        platform: 'comfly'
+      },
+      {
         id: 'vpreset-1',
         name: 'omni_flash-10s-z',
         apiKey: '',
         apiUrl: 'https://new2api.scd666.com',
         size: '1280x720',
+        platform: 'scd666'
       }
     ];
 
@@ -4780,28 +4789,51 @@
     }
 
     // ========== Comfly Video API ==========
+    // comfly omni_flash-10s: POST /v1/videos (multipart/form-data)
     async function callComflyVideoAPI(prompt, refImages) {
-      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');
       const apiKey = state.videoApiKey;
       const size = state.videoSize;
+      const model = getCurrentModelName();
 
-      const body = {
-        model: getCurrentModelName(),
-        prompt: prompt,
-        size: size,
-      };
+      const formData = new FormData();
+      formData.append('model', model);
+      formData.append('prompt', prompt);
+      formData.append('size', size);
+      formData.append('seconds', '10');
+      formData.append('watermark', 'false');
 
+      // 参考图：input_reference 字段，文件上传
       if (refImages && refImages.length > 0) {
-        body.images = refImages; // comfly uses JSON images array
+        for (const src of refImages) {
+          try {
+            if (src.startsWith('data:')) {
+              const parts = src.split(',');
+              const mime = src.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
+              const binaryStr = atob(parts[1]);
+              const bytes = new Uint8Array(binaryStr.length);
+              for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+              const blob = new Blob([bytes], { type: mime });
+              formData.append('input_reference', blob, 'reference.jpg');
+            } else if (src.startsWith('http')) {
+              // URL → fetch → blob → file
+              const resp = await fetch(src);
+              if (!resp.ok) continue;
+              const blob = await resp.blob();
+              formData.append('input_reference', blob, 'reference.jpg');
+            }
+          } catch(e) {
+            console.error('[Comfly Video] reference image error:', e);
+          }
+        }
       }
 
-      const response = await fetch(baseUrl + '/v2/videos/generations', {
+      const response = await fetch(baseUrl + '/videos', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + apiKey,
         },
-        body: JSON.stringify(body),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -4818,7 +4850,7 @@
     }
 
     async function pollComflyVideoStatus(taskId, genId, targetConvId, prompt, refImageSrcs) {
-      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '').replace(/\/v\d+$/, '');
+      const baseUrl = state.videoBaseUrl.replace(/\/+$/, '');  // keep /v1 for path consistency
       const apiKey = state.videoApiKey;
       const startedAt = Date.now();
       const maxDurationMs = 30 * 60 * 1000;   // 总超时 30 分钟
@@ -4860,7 +4892,7 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
         try {
-          const response = await fetch(baseUrl + '/v2/videos/generations/' + taskId, {
+          const response = await fetch(baseUrl + '/videos/' + taskId, {
             headers: { 'Authorization': 'Bearer ' + apiKey },
             signal: controller.signal,
           });
@@ -4876,23 +4908,24 @@
           } else {
             consecutiveErrors = 0;
             const data = await safeJson(response, 'ComflyVideoPoll');
-            // comfly: status=IN_PROGRESS/SUCCESS/FAILED, progress="0%", video in data.output
+            // comfly omni_flash-10s: status=queued/in_progress/completed/failed
+            // 文档: https://gpt-best.apifox.cn/api-362760648
             const status = (data.status || '').toLowerCase();
             const progress = parseInt(data.progress) || 0;
             console.log('[Comfly Video Poll]', taskId, data.status, progress);
-            updateVideoGeneratingProgress(genId, status === 'success' ? 'completed' : status, progress);
+            updateVideoGeneratingProgress(genId, status, progress);
 
-            if (status === 'success') {
+            if (status === 'completed') {
               cleanup();
               removeFromActive();
-              const videoUrl = (data.data && data.data.output) || data.video_url || '';
+              const videoUrl = data.video_url || (data.data && data.data.output) || '';
               replaceWithVideo(genId, videoUrl, prompt, state.videoSize, refImageSrcs, targetConvId, data);
               return;
             } else if (status === 'failed') {
               cleanup();
               removeFromActive();
-              const errMsg = data.fail_reason || (data.error && data.error.message) || '视频生成失败';
-              replaceWithVideoError(genId, errMsg, '', prompt);
+              const errMsg = (data.error && (data.error.message || data.error)) || data.fail_reason || '视频生成失败';
+              replaceWithVideoError(genId, typeof errMsg === 'string' ? errMsg : '视频生成失败', '', prompt);
               return;
             }
           }
