@@ -2849,7 +2849,10 @@
         if (convMsg) convMsg.type = 'generating';
         // rebuild generating UI
         const refBadges = currentRefImages.length > 0
-          ? currentRefImages.map((src, idx) => `<span class="generating-ref-badge" data-lightbox-src="${escapeHtml(src)}" onclick="openLightboxFromEl(this)"><img src="${escapeHtml(src)}">参考图 ${currentRefImages.length > 1 ? (idx+1) : ''}</span>`).join('')
+          ? currentRefImages.map((src, idx) => {
+              const srcAttr = escapeHtml(src);
+              return `<span class="generating-ref-badge" data-lightbox-src="${srcAttr}" data-lightbox-prompt="参考图 ${idx+1}" onclick="openLightboxFromEl(this)" title="点击查看参考图 ${idx+1}"><img src="${srcAttr}" alt="参考图">参考图 ${currentRefImages.length > 1 ? (idx+1) : ''}</span>`;
+            }).join('')
           : '';
         if (count === 1) {
           div.innerHTML = `
@@ -3016,7 +3019,10 @@
         const convMsg = conv?.messages?.find(m => m.id === genId);
         if (convMsg) convMsg.type = 'generating';
         const refBadges = currentRefImages.length > 0
-          ? currentRefImages.map((src, idx) => `<span class="generating-ref-badge" onclick="openLightboxFromEl(this)"><img src="${escapeHtml(src)}">参考图 ${currentRefImages.length > 1 ? (idx+1) : ''}</span>`).join('')
+          ? currentRefImages.map((src, idx) => {
+              const srcAttr = escapeHtml(src);
+              return `<span class="generating-ref-badge" data-lightbox-src="${srcAttr}" data-lightbox-prompt="参考图 ${idx+1}" onclick="openLightboxFromEl(this)" title="点击查看参考图 ${idx+1}"><img src="${srcAttr}" alt="参考图">参考图 ${currentRefImages.length > 1 ? (idx+1) : ''}</span>`;
+            }).join('')
           : '';
         div.innerHTML = `
           <div class="message-inner"><div class="assistant-avatar">✦</div><div class="assistant-content">
@@ -3321,7 +3327,10 @@
             div.id = 'msg-' + msg.id;
             const elapsed = Math.floor((Date.now() - gen.startTime) / 1000);
             const refBadges = (gen.refImages && gen.refImages.length > 0)
-              ? gen.refImages.map((src, idx) => `<span class="generating-ref-badge" onclick="openLightboxFromEl(this)"><img src="${escapeHtml(src)}">参考图 ${gen.refImages.length > 1 ? (idx+1) : ''}</span>`).join('')
+              ? gen.refImages.map((src, idx) => {
+                  const srcAttr = escapeHtml(src);
+                  return `<span class="generating-ref-badge" data-lightbox-src="${srcAttr}" data-lightbox-prompt="参考图 ${idx+1}" onclick="openLightboxFromEl(this)" title="点击查看参考图 ${idx+1}"><img src="${srcAttr}" alt="参考图">参考图 ${gen.refImages.length > 1 ? (idx+1) : ''}</span>`;
+                }).join('')
               : '';
             div.innerHTML = `
               <div class="message-inner">
