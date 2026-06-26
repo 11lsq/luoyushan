@@ -4804,24 +4804,17 @@
       formData.append('seconds', '10');
       formData.append('watermark', 'false');
 
-      // 参考图：input_reference 字段，文件上传
+      // 参考图：input_reference 字段（文本传 URL / base64，与 API 文档一致）
       if (refImages && refImages.length > 0) {
         for (const src of refImages) {
           try {
             if (src.startsWith('data:')) {
-              const parts = src.split(',');
-              const mime = src.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
-              const binaryStr = atob(parts[1]);
-              const bytes = new Uint8Array(binaryStr.length);
-              for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-              const blob = new Blob([bytes], { type: mime });
-              formData.append('input_reference', blob, 'reference.jpg');
-            } else if (src.startsWith('http')) {
-              // URL → fetch → blob → file
-              const resp = await fetch(src);
-              if (!resp.ok) continue;
-              const blob = await resp.blob();
-              formData.append('input_reference', blob, 'reference.jpg');
+              // Base64 data URI → 文本字段直传
+              formData.append('input_reference', src);
+            } else {
+              // URL（绝对/相对）→ 文本字段直传，comfly 网关自动下载转 base64
+              const url = src.startsWith('http') ? src : (window.location.origin + src);
+              formData.append('input_reference', url);
             }
           } catch(e) {
             console.error('[Comfly Video] reference image error:', e);
@@ -4909,8 +4902,8 @@
           } else {
             consecutiveErrors = 0;
             const data = await safeJson(response, 'ComflyVideoPoll');
-            // comfly omni_flash-10s: status=queued/in_progress/completed/failed
-            // 文档: https://gpt-best.apifox.cn/api-362760648
+            // comfly omni_flash-10s: status=queued/processing/completed/failed
+            // 文档: https://snrrtlug1r.apifox.cn/
             const status = (data.status || '').toLowerCase();
             const progress = parseInt(data.progress) || 0;
             console.log('[Comfly Video Poll]', taskId, data.status, progress);
