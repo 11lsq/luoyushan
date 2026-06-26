@@ -2453,10 +2453,6 @@
 
     // ========== Send Video Message ==========
     async function sendVideoMessage(prompt) {
-      const input = document.getElementById('promptInput');
-      input.value = '';
-      input.style.height = 'auto';
-
       addUserMessage(prompt);
 
       if (!state.activeConvId) {
@@ -2464,8 +2460,6 @@
       }
 
       const currentRefImages = [...state.referenceImages];
-      state.referenceImages = [];
-      updateRefImagePreview();
 
       const genId = addVideoGeneratingMessage(prompt, currentRefImages);
       const targetConvId = state.activeConvId;
@@ -3007,8 +3001,6 @@
       const refSrcs = state.messages.find(m => m.id === msgId)?.refImageSrcs || [];
       if (refSrcs.length > 0) { state.referenceImages = [...refSrcs]; updateRefImagePreview(); }
       const currentRefImages = [...state.referenceImages];
-      state.referenceImages = [];
-      updateRefImagePreview();
 
       // Convert error card back to video generating shimmer
       const div = document.getElementById('msg-' + genId);
