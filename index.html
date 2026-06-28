@@ -2334,9 +2334,6 @@
         return;
       }
 
-      input.value = '';
-      input.style.height = 'auto';
-
       addUserMessage(prompt);
 
       if (!state.activeConvId) {
@@ -2345,8 +2342,6 @@
 
       const count = state.imageCount;
       const currentRefImages = [...state.referenceImages];
-      state.referenceImages = [];
-      updateRefImagePreview();
 
       const genId = addGeneratingMessage(prompt, currentRefImages);
       const targetConvId = state.activeConvId;
@@ -2831,8 +2826,6 @@
       const genId = msgId; // reuse same card
       const targetConvId = state.activeConvId;
       const currentRefImages = [...state.referenceImages];
-      state.referenceImages = [];
-      updateRefImagePreview();
 
       // Convert error card back to generating shimmer
       const div = document.getElementById('msg-' + genId);
